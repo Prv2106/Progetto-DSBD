@@ -4,6 +4,8 @@ WORKDIR /app
 
 RUN pip install grpcio grpcio-tools
 
+RUN pip install pymysql
+
 COPY usermanagement_pb2.py usermanagement_pb2_grpc.py client.py /app/
 
 

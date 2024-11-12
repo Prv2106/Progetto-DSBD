@@ -1,2 +1,2 @@
 .vscode/
-./gRPC/venv
+gRPC/venv/
