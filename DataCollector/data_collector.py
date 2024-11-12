@@ -14,7 +14,7 @@ def fetch_tickers_from_db():
     conn = pymysql.connect(**db_config)
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT ticker FROM Utenti;")            
+            cursor.execute("SELECT ticker FROM Users;")            
             result = cursor.fetchall()
 
             # Estrae solo i ticker come lista di stringhe

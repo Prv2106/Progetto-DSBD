@@ -11,7 +11,20 @@ services:
     restart: unless-stopped
     container_name: users_db_container
 
-  users-db-client:
+
+  data-db:
+    build:
+      context: ./DB
+      dockerfile: dockerfile-mysql-data
+    networks:
+      - net
+    volumes: 
+      - data_vol:/var/lib/mysql
+    restart: unless-stopped
+    container_name: data_db_container
+
+
+  db-client: # per il testing
     build:
       context: ./DB
       dockerfile: dockerfile-mysql-users-client
@@ -19,7 +32,7 @@ services:
       - users-db
     networks:
       - net
-    container_name: users_db_client_container
+    container_name: db_client_container
     stdin_open: true  # Mantiene lo stdin aperto per una shell interattiva
 
   data-collector:
@@ -37,5 +50,7 @@ networks:
     driver: bridge
 volumes:
   users_vol: 
+    driver: local
+  data_vol:
     driver: local
 
