@@ -2,7 +2,7 @@ version: '3.8'
 services:
   users-db:
     build:
-      context: .
+      context: ./DB
       dockerfile: dockerfile-mysql-users
     networks:
       - net
@@ -13,7 +13,7 @@ services:
 
   users-db-client:
     build:
-      context: .
+      context: ./DB
       dockerfile: dockerfile-mysql-users-client
     depends_on:
       - users-db
@@ -21,7 +21,17 @@ services:
       - net
     container_name: users_db_client_container
     stdin_open: true  # Mantiene lo stdin aperto per una shell interattiva
-   
+
+  data-collector:
+    build:
+      context: ./DataCollector
+      dockerfile: dockerfile-datacollector
+    depends_on:
+      - users-db
+    networks:
+      - net
+    container_name: data_collector
+    restart: unless-stopped
 networks:
   net:
     driver: bridge
