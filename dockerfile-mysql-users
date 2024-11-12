@@ -9,5 +9,4 @@ ENV MYSQL_PASSWORD=dsbd_users
 
 VOLUME /var/lib/mysql
 
-COPY init.sql /docker-entrypoint-initdb.d/
 

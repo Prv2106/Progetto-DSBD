@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  users-db:
+    build:
+      context: .
+      dockerfile: dockerfile-mysql-users
+    networks:
+      - net
+    volumes: 
+      - users_vol:/var/lib/mysql
+    restart: unless-stopped
+    container_name: users_db_container
+
+  users-db-client:
+    build:
+      context: .
+      dockerfile: dockerfile-mysql-users-client
+    depends_on:
+      - users-db
+    networks:
+      - net
+    container_name: users_db_client_container
+    stdin_open: true  # Mantiene lo stdin aperto per una shell interattiva
+   
+networks:
+  net:
+    driver: bridge
+volumes:
+  users_vol: 
+    driver: local
+
