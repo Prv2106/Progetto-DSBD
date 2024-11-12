@@ -1,5 +1,6 @@
 version: '3.8'
-services:
+
+services: 
   users-db:
     build:
       context: ./DB
@@ -10,7 +11,6 @@ services:
       - users_vol:/var/lib/mysql
     container_name: users_db_container
 
-
   data-db:
     build:
       context: ./DB
@@ -20,7 +20,6 @@ services:
     volumes: 
       - data_vol:/var/lib/mysql
     container_name: data_db_container
-
 
   db-client: # per il testing
     build:
