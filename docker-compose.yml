@@ -1,5 +1,6 @@
 version: '3.8'
-services:
+
+services: 
   users-db:
     build:
       context: ./DB
@@ -8,9 +9,7 @@ services:
       - net
     volumes: 
       - users_vol:/var/lib/mysql
-    restart: unless-stopped
     container_name: users_db_container
-
 
   data-db:
     build:
@@ -20,9 +19,7 @@ services:
       - net
     volumes: 
       - data_vol:/var/lib/mysql
-    restart: unless-stopped
     container_name: data_db_container
-
 
   db-client: # per il testing
     build:
@@ -30,6 +27,7 @@ services:
       dockerfile: dockerfile-mysql-users-client
     depends_on:
       - users-db
+      - data-db
     networks:
       - net
     container_name: db_client_container
@@ -41,13 +39,15 @@ services:
       dockerfile: dockerfile-datacollector
     depends_on:
       - users-db
+      - data-db
     networks:
       - net
     container_name: data_collector
-    restart: unless-stopped
+
 networks:
   net:
     driver: bridge
+
 volumes:
   users_vol: 
     driver: local
