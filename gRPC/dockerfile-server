@@ -1,0 +1,13 @@
+FROM python:3.9  
+
+WORKDIR /app
+
+# Installazione delle librerie necessarie
+COPY requirements.txt requirements.txt
+
+RUN pip install -r requirements.txt
+
+
+COPY usermanagement_pb2.py usermanagement_pb2_grpc.py server.py /app/
+
+CMD [ "python", "server.py"]
