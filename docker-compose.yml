@@ -43,6 +43,7 @@ services:
     networks:
       - net
     container_name: data_collector
+    restart: unless-stop
 
   client-grpc:
     build:
