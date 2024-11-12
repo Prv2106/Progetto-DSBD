@@ -1,4 +1,0 @@
-grpcio
-grpcio-tools
-protobuf==3.20.0
-SQLAlchemy
