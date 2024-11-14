@@ -1,79 +1,56 @@
 version: '3.8'
 
 services: 
-  users-db:
+  db:
     build:
       context: ./DB
-      dockerfile: dockerfile-mysql-users
+      dockerfile: dockerfile-mysql
     networks:
       - net
     volumes: 
-      - users_vol:/var/lib/mysql
-    container_name: users_db_container
-
-  data-db:
-    build:
-      context: ./DB
-      dockerfile: dockerfile-mysql-data
-    networks:
-      - net
-    volumes: 
-      - data_vol:/var/lib/mysql
-    container_name: data_db_container
-
+      - db_vol:/var/lib/mysql
+    container_name: mysql_container
+  
   db-client: # per il testing
     build:
       context: ./DB
-      dockerfile: dockerfile-mysql-users-client
+      dockerfile: dockerfile-mysql-client
     depends_on:
-      - users-db
-      - data-db
+      - db
     networks:
       - net
     container_name: db_client_container
     stdin_open: true  # Mantiene lo stdin aperto per una shell interattiva
+    tty: true
+    restart: on-failure
 
   data-collector:
     build:
       context: ./DataCollector
       dockerfile: dockerfile-datacollector
     depends_on:
-      - users-db
-      - data-db
+      - db
     networks:
       - net
     container_name: data_collector
-    restart: unless-stop
-
-  client-grpc:
-    build:
-      context: ./gRPC
-      dockerfile: dockerfile-client
-    depends_on:
-      - users-db
-      - data-db
-    networks:
-      - net
-    container_name: client
+    restart: always
 
   server-grpc:
     build:
       context: ./gRPC
       dockerfile: dockerfile-server
     depends_on:
-      - users-db
-      - data-db
+      - db
     networks:
       - net
     container_name: server
+    ports:
+      - "50051:50051"
 
 networks:
   net:
     driver: bridge
 
 volumes:
-  users_vol: 
+  db_vol: 
     driver: local
-  data_vol:
-    driver: local
-

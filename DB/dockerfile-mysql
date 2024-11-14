@@ -3,9 +3,9 @@ FROM mysql
 
 
 ENV MYSQL_ROOT_PASSWORD=toor
-ENV MYSQL_DATABASE=DSBD_users   
+ENV MYSQL_DATABASE=DSBD_progetto
 ENV MYSQL_USER=alberto_giuseppe
-ENV MYSQL_PASSWORD=dsbd_users
+ENV MYSQL_PASSWORD=progetto
 
 VOLUME /var/lib/mysql
 

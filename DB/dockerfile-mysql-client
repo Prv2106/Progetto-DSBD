@@ -1,0 +1,10 @@
+FROM python:3.9
+
+WORKDIR /app
+
+COPY mysqlInit.py . 
+
+RUN pip install pymysql
+
+# Specifica il comando da eseguire all'avvio del container
+CMD ["python", "mysqlInit.py"]

@@ -1,8 +1,0 @@
-FROM mysql
-
-ENV MYSQL_ROOT_PASSWORD=toor
-ENV MYSQL_DATABASE=DSBD_data   
-ENV MYSQL_USER=alberto_giuseppe
-ENV MYSQL_PASSWORD=dsbd_data
-
-VOLUME /var/lib/mysql
