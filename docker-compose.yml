@@ -22,7 +22,7 @@ services:
     container_name: db_client_container
     stdin_open: true  # Mantiene lo stdin aperto per una shell interattiva
     tty: true
-    restart: on-failure
+    restart: always
 
   data-collector:
     build:

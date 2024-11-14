@@ -7,6 +7,9 @@ ENV MYSQL_DATABASE=DSBD_progetto
 ENV MYSQL_USER=alberto_giuseppe
 ENV MYSQL_PASSWORD=progetto
 
+# Copia il file init.sql nella cartella di inizializzazione di MySQL
+COPY init.sql /docker-entrypoint-initdb.d/
+
 VOLUME /var/lib/mysql
 
 
