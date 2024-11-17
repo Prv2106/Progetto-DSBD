@@ -36,12 +36,63 @@ def register_user(stub):
                 break  # Esce dal ciclo poiché l'errore non è recuperabile
     
     print("Non è stato possibile completare la richiesta")
-    
+
+###########################################################################
+# TODO:
+
+def update_user(stub):
+    email = input("Inserisci la tua email per l'aggiornamento: ")
+    nuovo_ticker = input("Inserisci il nuovo ticker: ")
+
+    request = usermanagement_pb2.UserUpdateRequest(email=email, nuovo_ticker=nuovo_ticker)
+    try:
+        response = stub.UpdateUser(request)
+        print(f"Esito: {response.success}, Messaggio: {response.message}")
+    except grpc.RpcError as error:
+        print(f"Errore durante l'aggiornamento: {error}")
+
+def delete_user(stub):
+    email = input("Inserisci la tua email per la cancellazione: ")
+
+    request = usermanagement_pb2.UserDeleteRequest(email=email)
+    try:
+        response = stub.DeleteUser(request)
+        print(f"Esito: {response.success}, Messaggio: {response.message}")
+    except grpc.RpcError as error:
+        print(f"Errore durante la cancellazione: {error}")
+
+def get_last_value(stub):
+    ticker = input("Inserisci il ticker per recuperare l'ultimo valore disponibile: ")
+
+    request = usermanagement_pb2.LastValueRequest(ticker=ticker)
+    try:
+        response = stub.GetLastValue(request)
+        print(f"Ultimo valore disponibile: {response.value}")
+    except grpc.RpcError as error:
+        print(f"Errore durante il recupero del valore: {error}")
+
+def calculate_average(stub):
+    ticker = input("Inserisci il ticker per calcolare la media: ")
+    x = int(input("Inserisci il numero di ultimi valori da considerare: "))
+
+    request = usermanagement_pb2.AverageRequest(ticker=ticker, count=x)
+    try:
+        response = stub.CalculateAverage(request)
+        print(f"Media degli ultimi {x} valori: {response.average}")
+    except grpc.RpcError as error:
+        print(f"Errore durante il calcolo della media: {error}")
+
+
+#############################################################################
 
 def show_menu():
     print("\nMenu:")
-    print("1. Registrati")
-    print("2. Esci")
+    print("1. Registrazione Utente")
+    print("2. Aggiornamento Utente")
+    print("3. Cancellazione Utente")
+    print("4. Recupero Ultimo Valore Disponibile")
+    print("5. Calcolo della Media degli Ultimi Valori")
+    print("6. Esci")
 
 
 
@@ -54,11 +105,11 @@ def run():
         while True:
             # Mostra il menu e ottieni la scelta dell'utente
             show_menu()
-            choice = input("Scegli un'opzione (1 o 2): ")
-
+            choice = input("Scegli un'opzione: ")
+            
             if choice == "1":
                 register_user(stub)
-            elif choice == "2":
+            elif choice == "6":
                 print("Uscita...")
                 break
             else:

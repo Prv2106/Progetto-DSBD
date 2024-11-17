@@ -71,9 +71,12 @@ class UserServiceServicer(usermanagement_pb2_grpc.UserServiceServicer):
                 request_cache[request_id][user_id] = True
 
         except pymysql.MySQLError as err:
-            logger.error(f"Errore durante l'inserimento nel database: {err}")
-            response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
-        
+            if err.args[0] == 1062:  # Codice per duplicate entry (violazione chiave univoca)
+                logger.error(f"Errore di duplicazione: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message="Errore: l'utente con questa email esiste già.")
+            else:
+                logger.error(f"Errore durante l'inserimento nel database: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
         finally:
             # Chiudiamo la connessione al database
             conn.close()
