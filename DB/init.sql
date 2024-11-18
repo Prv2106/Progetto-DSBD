@@ -10,11 +10,9 @@ CREATE TABLE IF NOT EXISTS Users (
 -- Crea la tabella 'Data' con una foreign key che fa riferimento a 'Users'
 CREATE TABLE IF NOT EXISTS Data (
     timestamp DATETIME NOT NULL,
-    id INT NOT NULL,
     ticker VARCHAR(50) NOT NULL,
     valore_euro DECIMAL(10, 2) NOT NULL,
-    PRIMARY KEY (timestamp, id, ticker),
-    FOREIGN KEY (id) REFERENCES Users(id)
+    PRIMARY KEY (timestamp, ticker)
 );
 
 

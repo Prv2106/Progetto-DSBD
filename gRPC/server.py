@@ -39,24 +39,18 @@ class UserServiceServicer(usermanagement_pb2_grpc.UserServiceServicer):
         user_id = metadata.get('user_id', "unknown")
         request_id = metadata.get('request_id', "unknown")
 
-        logger.info(f"Metadati ricevuti: UserId -> {user_id}, RequestID -> {request_id}")
+        logger.info(f"\nMetadati ricevuti: UserId -> {user_id}, RequestID -> {request_id}")
+        
 
         with cache_lock:
-            # Log della cache per il debug
-            logger.info("Contenuto della cache (chiave -> valore):")
-            for request_id_key, user_cache in request_cache.items():
-                for user_id_key, processed in user_cache.items():
-                    logger.info(f"RequestID: {request_id_key}, UserID: {user_id_key}, Processato: {processed}")
-            
             # Verifichiamo se la richiesta era stata già processata
             if request_id in request_cache:
                 if user_id in request_cache[request_id]:
-                    logger.info(f"Richiesta già elaborata per l'utente {user_id}")
-                    return usermanagement_pb2.UserResponse(success=True, message="Utente già registrato")
-
+                    logger.info(f"\nRichiesta già elaborata per l'utente {user_id}")
+                    return request_cache[request_id][user_id] # ritorniamo la risposta già processata
         try:
             # Logica di registrazione utente
-            logger.info(f"Registrazione utente: {request.email}, Ticker: {request.ticker}")
+            logger.info(f"\nRegistrazione utente: {request.email}, Ticker: {request.ticker}")
             conn = pymysql.connect(**db_config)
             with conn.cursor() as cursor:
                 cursor.execute(register_user_query, (request.email, request.ticker))
@@ -64,25 +58,33 @@ class UserServiceServicer(usermanagement_pb2_grpc.UserServiceServicer):
 
             response = usermanagement_pb2.UserResponse(success=True, message="Utente registrato con successo!")
 
+        except pymysql.MySQLError as err:
+            if err.args[0] == 1062:  # Codice per duplicate entry (violazione chiave univoca)
+                logger.error(f"\nErrore di duplicazione: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message="Errore: l'utente con questa email esiste già.")
+
+            else:
+                logger.error(f"\nErrore durante l'inserimento nel database: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
+
+        finally:
+            # Chiudiamo la connessione al database
+            conn.close()
+                # Log della cache per il debug
+        
             # Memorizzazione della risposta nella cache
             with cache_lock:
                 if request_id not in request_cache:
                     request_cache[request_id] = {}
-                request_cache[request_id][user_id] = True
+                request_cache[request_id][user_id] = response
+                
+            logger.info("#########################################")
+            logger.info(f"Contenuto della cache: {request_cache}")
 
-        except pymysql.MySQLError as err:
-            if err.args[0] == 1062:  # Codice per duplicate entry (violazione chiave univoca)
-                logger.error(f"Errore di duplicazione: {err}")
-                response = usermanagement_pb2.UserResponse(success=False, message="Errore: l'utente con questa email esiste già.")
-            else:
-                logger.error(f"Errore durante l'inserimento nel database: {err}")
-                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
-        finally:
-            # Chiudiamo la connessione al database
-            conn.close()
+        
             
         # test per il timeout
-        # time.sleep(3)
+        time.sleep(4)
         return response
 
 

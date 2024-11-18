@@ -19,8 +19,8 @@ db_config = {
 
 # QUERIEs
 insert_query = """
-    INSERT INTO Data (timestamp, id, ticker, valore_euro)
-    VALUES (%s, %s, %s, %s);
+    INSERT INTO Data (timestamp, ticker, valore_euro)
+    VALUES (%s, %s, %s);
 """
 
 # Query che per ogni id e ticker restituisce quello più vecchio
@@ -28,33 +28,35 @@ delete_old_query = """
     DELETE D 
     FROM Data D
     JOIN (
-        SELECT id, ticker, MIN(timestamp) AS oldest_timestamp
+        SELECT ticker, MIN(timestamp) AS oldest_timestamp
         FROM Data
-        GROUP BY id, ticker
-    ) AS subquery ON D.id = subquery.id AND D.ticker = subquery.ticker AND D.timestamp = subquery.oldest_timestamp
-    WHERE D.id = %s AND D.ticker = %s;
+        GROUP BY ticker
+    ) AS subquery ON D.ticker = subquery.ticker AND D.timestamp = subquery.oldest_timestamp
+    WHERE D.ticker = %s;
 """
 
 
 circuit_breaker = CircuitBreaker(f_threshold = 4, r_timeout= 30)
 maximum_occurrences = 10
 
-def fetch_users_from_db(conn):
+def fetch_ticker_from_db(conn):
     # Usa la connessione passata come parametro
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT id, ticker FROM Users;")            
+            cursor.execute("SELECT DISTINCT ticker FROM Users;")            
             result = cursor.fetchall() 
 
             if not result:  # condizione di lista vuota
-                return [], []
+                return []
 
-            # Otteniamo 2 liste separate a partire da una lista di tuple
-            ids, tickers = zip(*result)  # unpacking
-            return ids, tickers
+            # otteniamo una lista a partire dalla lista di tuple
+            # result è una lista di tuple per esempio: [('AAPL',), ('GOOG',), ('TSLA',)]
+            tickers = [row[0] for row in result]
+            return tickers
+        
     except Exception as e:
         print(f"Errore durante il recupero degli utenti: {e}")
-        return [], []
+        return []
 
 
 def fetch_yfinance_data(ticker):
@@ -82,18 +84,19 @@ def data_collector():
     # Connessione al database (una sola volta)
     conn = pymysql.connect(**db_config)
     try:
-        # Otteniamo gli utenti (id, ticker) dalla tabella Users
-        ids, tickers = fetch_users_from_db(conn)  # Passiamo la connessione
-        print("data_collector.py: Utenti recuperati con successo!")
-
-        if not ids or not tickers:
+        # Otteniamo i ticker dalla tabella Users
+        tickers = fetch_ticker_from_db(conn)  # Passiamo la connessione
+        print("\n############################################################")
+        print(f"data_collector.py: Lista dei Ticker recuperati: {tickers}")
+        print("############################################################\n")
+        if not tickers:
             print("data_collector.py: Nessun dato trovato nella tabella Users.")
             return
 
        
         with conn.cursor() as cursor: # crea un oggetto cursore (che è utilizzato per eseguire le query nel database)
             # Cicliamo per ogni coppia (id, ticker)
-            for id, ticker in zip(ids, tickers):
+            for ticker in tickers:
                 try:
                     # Richiede i dati al Circuit Breaker
                     price_in_eur = circuit_breaker.call(fetch_yfinance_data, ticker)
@@ -105,16 +108,17 @@ def data_collector():
                 timestamp = datetime.now(tz)
 
                 # Inseriamo i dati nel database
-                cursor.execute(insert_query, (timestamp, id, ticker, price_in_eur))
+                cursor.execute(insert_query, (timestamp,ticker, price_in_eur))
 
-                # Contiamo le occorrenze presenti per la coppia (id, ticker)
-                cursor.execute("SELECT COUNT(*) FROM Data WHERE id = %s AND ticker = %s", (id, ticker))
+                # Contiamo le occorrenze presenti per un dato ticker
+                cursor.execute("SELECT COUNT(*) FROM Data WHERE ticker = %s", (ticker))
                 count = cursor.fetchone()[0]
 
                 # Se ci sono più di maximum_occurrences, eliminiamo la più vecchia
                 if count > maximum_occurrences:
-                    cursor.execute(delete_old_query, (id, ticker))
-                print(f"data_collector.py: Operazione per utente -> {id} e ticker -> {ticker} conclusa con successo alle ore: {datetime.now(tz)}")
+                    cursor.execute(delete_old_query, (ticker))
+                
+                print(f"\ndata_collector.py: Ticker '{ticker}' aggiornato con successo, prezzo in uscita -> {price_in_eur:.2f} ({datetime.now(tz)})\n")
 
             # Confermiamo tutte le modifiche nel database
             conn.commit()

@@ -1,7 +1,0 @@
-FROM ubuntu
-
-RUN apt-get update && \
-    apt install -y default-mysql-client && \
-    apt install -y iputils-ping && \
-    apt install net-tools && \
-    apt-get install -y iproute2

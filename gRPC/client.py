@@ -10,25 +10,29 @@ def register_user(stub):
     email = input("Inserisci la tua email: ")
     ticker = input("Inserisci il ticker del tuo investimento: ")
 
+
     metadata = [
         ('user_id', email),
-        ('request_id',"register_req") 
+        ('request_id',str(random.randint(1,100000))) 
+        
     ]
 
-    max_attempts = 20
+    max_attempts = 10
 
+    request = usermanagement_pb2.UserRegisterRequest(email=email, ticker=ticker)
     # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):
-        request = usermanagement_pb2.UserRegisterRequest(email=email, ticker=ticker)
         try:
             # Invoca il metodo RegisterUser e ottieni la risposta
             response = stub.RegisterUser(request, metadata = metadata,timeout = 2)
-            print(f"Esito: {response.success}, Messaggio: {response.message}")
+            print(f"\nEsito: {response.success}, Messaggio: {response.message}")
             return
         
         except grpc.RpcError as error:
             if error.code() == grpc.StatusCode.DEADLINE_EXCEEDED: # se è scaduto il timeout
-                print(f"Timeout superato, tentativo {attempt + 1} di {max_attempts}")
+                print("############################################################")
+                print(f"\nTimeout superato, tentativo {attempt + 1} di {max_attempts}")
+                print("############################################################")
                 continue  # Prova un altro tentativo
             
             elif error.code() in {grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.CANCELLED}:
@@ -41,46 +45,16 @@ def register_user(stub):
 # TODO:
 
 def update_user(stub):
-    email = input("Inserisci la tua email per l'aggiornamento: ")
-    nuovo_ticker = input("Inserisci il nuovo ticker: ")
-
-    request = usermanagement_pb2.UserUpdateRequest(email=email, nuovo_ticker=nuovo_ticker)
-    try:
-        response = stub.UpdateUser(request)
-        print(f"Esito: {response.success}, Messaggio: {response.message}")
-    except grpc.RpcError as error:
-        print(f"Errore durante l'aggiornamento: {error}")
+    pass
 
 def delete_user(stub):
-    email = input("Inserisci la tua email per la cancellazione: ")
-
-    request = usermanagement_pb2.UserDeleteRequest(email=email)
-    try:
-        response = stub.DeleteUser(request)
-        print(f"Esito: {response.success}, Messaggio: {response.message}")
-    except grpc.RpcError as error:
-        print(f"Errore durante la cancellazione: {error}")
+    pass
 
 def get_last_value(stub):
-    ticker = input("Inserisci il ticker per recuperare l'ultimo valore disponibile: ")
-
-    request = usermanagement_pb2.LastValueRequest(ticker=ticker)
-    try:
-        response = stub.GetLastValue(request)
-        print(f"Ultimo valore disponibile: {response.value}")
-    except grpc.RpcError as error:
-        print(f"Errore durante il recupero del valore: {error}")
+    pass
 
 def calculate_average(stub):
-    ticker = input("Inserisci il ticker per calcolare la media: ")
-    x = int(input("Inserisci il numero di ultimi valori da considerare: "))
-
-    request = usermanagement_pb2.AverageRequest(ticker=ticker, count=x)
-    try:
-        response = stub.CalculateAverage(request)
-        print(f"Media degli ultimi {x} valori: {response.average}")
-    except grpc.RpcError as error:
-        print(f"Errore durante il calcolo della media: {error}")
+    pass
 
 
 #############################################################################

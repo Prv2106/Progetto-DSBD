@@ -10,19 +10,6 @@ services:
     volumes: 
       - db_vol:/var/lib/mysql
     container_name: mysql_container
-  
-  db-client: # per il testing
-    build:
-      context: ./DB
-      dockerfile: dockerfile-mysql-client
-    depends_on:
-      - db
-    networks:
-      - net
-    container_name: db_client_container
-    stdin_open: true  # Mantiene lo stdin aperto per una shell interattiva
-    tty: true
-    restart: always
 
   data-collector:
     build:
