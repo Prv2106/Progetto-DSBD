@@ -47,6 +47,7 @@ class UserServiceServicer(usermanagement_pb2_grpc.UserServiceServicer):
             if request_id in request_cache:
                 if user_id in request_cache[request_id]:
                     logger.info(f"\nRichiesta già elaborata per l'utente {user_id}")
+                    # Test per il Timeout
                     time.sleep(1)
                     return request_cache[request_id][user_id] # ritorniamo la risposta già processata
         try:
