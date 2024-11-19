@@ -9,7 +9,7 @@ service UserService {
    // rpc DeleteUser (UserIdentifier) returns (UserResponse);
     
     // Metodi per il recupero dei dati
-   // rpc GetLatestValue (UserIdentifier) returns (StockValueResponse);
+    rpc GetLatestValue (UserIdentifier) returns (StockValueResponse);
    // rpc GetAverageValue (AverageRequest) returns (AverageResponse);
 }
 
@@ -17,11 +17,6 @@ service UserService {
 message UserRegisterRequest {
     string email = 1;
     string ticker = 2;
-}
-/*
-message UserUpdateRequest {
-    string email = 1;
-    string new_ticker = 2;
 }
 
 message UserIdentifier {
@@ -32,6 +27,13 @@ message StockValueResponse {
     string ticker = 1;
     float value = 2;
     string timestamp = 3;
+}s
+
+
+/*
+message UserUpdateRequest {
+    string email = 1;
+    string new_ticker = 2;
 }
 
 message AverageRequest {

@@ -1,8 +1,7 @@
 import grpc
 import usermanagement_pb2
 import usermanagement_pb2_grpc
-import random
-
+import uuid
 
 
 def register_user(stub):
@@ -13,7 +12,7 @@ def register_user(stub):
 
     metadata = [
         ('user_id', email),
-        ('request_id',str(random.randint(1,100000))) 
+        ('request_id', str(uuid.uuid4())) 
         
     ]
 
@@ -30,8 +29,8 @@ def register_user(stub):
         
         except grpc.RpcError as error:
             if error.code() == grpc.StatusCode.DEADLINE_EXCEEDED: # se è scaduto il timeout
-                print("############################################################")
-                print(f"\nTimeout superato, tentativo {attempt + 1} di {max_attempts}")
+                print("\n############################################################")
+                print(f"Timeout superato, tentativo {attempt + 1} di {max_attempts}")
                 print("############################################################")
                 continue  # Prova un altro tentativo
             
@@ -51,6 +50,27 @@ def delete_user(stub):
     pass
 
 def get_last_value(stub):
+
+    email = input("Inserisci la tua email: ")
+
+    metadata = [
+        ('user_id', email),
+        ('request_id',  str(uuid.uuid4()))
+    ]
+
+
+
+# TODO: 
+    try:
+        pass
+    except:
+        pass
+    finally:
+        pass
+
+
+
+
     pass
 
 def calculate_average(stub):

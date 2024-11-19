@@ -6,7 +6,8 @@ services:
       context: ./DB
       dockerfile: dockerfile-mysql
     networks:
-      - net
+      - net1
+      - net2
     volumes: 
       - db_vol:/var/lib/mysql
     container_name: mysql_container
@@ -18,7 +19,7 @@ services:
     depends_on:
       - db
     networks:
-      - net
+      - net2
     container_name: data_collector
     restart: always
 
@@ -29,15 +30,16 @@ services:
     depends_on:
       - db
     networks:
-      - net
+      - net1
     container_name: server
     ports:
       - "50051:50051"
 
 networks:
-  net:
+  net1:
     driver: bridge
-
+  net2: 
+    driver: bridge
 volumes:
   db_vol: 
     driver: local
