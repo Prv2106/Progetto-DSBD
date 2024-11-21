@@ -41,25 +41,6 @@ delete_old_query = """
 circuit_breaker = CircuitBreaker(f_threshold = 4, r_timeout= 30)
 maximum_occurrences = 10 # numero di entry nella tabella Data per ciascun ticker
 
-def fetch_ticker_from_db(conn):
-    # Usa la connessione passata come parametro
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT DISTINCT ticker FROM Users;")            
-            result = cursor.fetchall() 
-
-            if not result:  # condizione di lista vuota
-                return []
-
-            # otteniamo una lista a partire dalla lista di tuple
-            # result è una lista di tuple per esempio: [('AAPL',), ('GOOG',), ('TSLA',)]
-            tickers = [row[0] for row in result]
-            return tickers
-        
-    except Exception as e:
-        print(f"Errore durante il recupero degli utenti: {e}")
-        return []
-
 
 def fetch_yfinance_data(ticker):
     stock = yf.Ticker(ticker)
@@ -81,11 +62,35 @@ def fetch_yfinance_data(ticker):
     closing_price_eur = closing_price_usd * usd_to_eur_rate
     return closing_price_eur
 
+def fetch_ticker_from_db(conn):
+    # Usa la connessione passata come parametro
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT DISTINCT ticker FROM Users;")            
+            result = cursor.fetchall() 
+
+            if not result:  # condizione di lista vuota
+                return []
+
+            # otteniamo una lista a partire dalla lista di tuple
+            # result è una lista di tuple per esempio: [('AAPL',), ('GOOG',), ('TSLA',)]
+            tickers = [row[0] for row in result]
+            return tickers
+        
+    except Exception as e:
+        print(f"Errore durante il recupero dei ticker: {e}")
+        return []
+
+
+
 def data_collector():
     # Connessione al database (una sola volta)
+    try:
+        conn = pymysql.connect(**db_config)
+    except pymysql.MySQLError as e:
+        print(f"Tentativo di connessione con il database fallito... Codice di errore: {e}")
+        return
 
-    # TODO: aggiungere un try: except: per il tentativo di connessione al db
-    conn = pymysql.connect(**db_config)
     try:
         # Otteniamo i ticker dalla tabella Users
         tickers = fetch_ticker_from_db(conn)  # Passiamo la connessione
@@ -95,12 +100,11 @@ def data_collector():
         print("############################################################\n")
 
         if not tickers:
-            print("data_collector.py: Nessun dato trovato nella tabella Users.")
+            print("data_collector.py: Nessun ticker trovato nella tabella Users")
             return
 
        
         with conn.cursor() as cursor: # crea un oggetto cursore (che è utilizzato per eseguire le query nel database)
-            
             for ticker in tickers:
                 try:
                     # Richiede i dati al Circuit Breaker
@@ -113,18 +117,23 @@ def data_collector():
                 # Otteniamo il timestamp corrente
                 timestamp = datetime.now(tz)
 
-                # Inseriamo i dati nel database
-                cursor.execute(insert_query, (timestamp,ticker, price_in_eur))
+                try:
+                    # Inseriamo i dati nel database
+                    cursor.execute(insert_query, (timestamp,ticker, price_in_eur))
 
-                # Contiamo le occorrenze presenti per un dato ticker
-                cursor.execute("SELECT COUNT(*) FROM Data WHERE ticker = %s", (ticker))
-                count = cursor.fetchone()[0]
+                    # Contiamo le occorrenze presenti per un dato ticker
+                    cursor.execute("SELECT COUNT(*) FROM Data WHERE ticker = %s", (ticker))
+                    count = cursor.fetchone()[0]
 
-                # Se ci sono più di maximum_occurrences, eliminiamo la più vecchia
-                if count > maximum_occurrences:
-                    cursor.execute(delete_old_query, (ticker))
-                
-                print(f"\ndata_collector.py: Ticker '{ticker}' aggiornato con successo, prezzo in uscita -> {price_in_eur:.2f} ({datetime.now(tz)})\n")
+                    # Se ci sono più di maximum_occurrences, eliminiamo la più vecchia
+                    if count > maximum_occurrences:
+                        cursor.execute(delete_old_query, (ticker))
+                    
+                    print(f"\ndata_collector.py: Ticker '{ticker}' aggiornato con successo, prezzo in uscita -> {price_in_eur:.2f} ({datetime.now(tz)})\n")
+
+                except pymysql.MySQLError as e:
+                    print(f"Errore nelle query al database... Codice di errore: {e}")
+
 
             # Confermiamo tutte le modifiche nel database
             conn.commit()
