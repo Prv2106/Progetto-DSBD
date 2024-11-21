@@ -19,6 +19,8 @@ message UserRegisterRequest {
     string ticker = 2;
 }
 
+
+
 message UserIdentifier {
     string email = 1;
 }
@@ -27,8 +29,12 @@ message StockValueResponse {
     string ticker = 1;
     float value = 2;
     string timestamp = 3;
-}s
+}
 
+message UserResponse {
+    bool success = 1;
+    string message = 2;
+}
 
 /*
 message UserUpdateRequest {
@@ -46,7 +52,3 @@ message AverageResponse {
     float average = 2;
 }
 */
-message UserResponse {
-    bool success = 1;
-    string message = 2;
-}

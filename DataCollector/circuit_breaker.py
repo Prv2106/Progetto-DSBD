@@ -9,7 +9,6 @@ class CircuitBreaker:
 
     # Metodo costruttore
     def __init__(self, f_threshold = 3, r_timeout = 20, e_exception = Exception):
-        
         #definizione degli attributi di istanza:
 
         self.state = "CLOSED" # inizialmente lo stato del circuit breaker è closed -> tutte le richieste passano
@@ -22,9 +21,8 @@ class CircuitBreaker:
 
 
     # Metodo che si occupa di eseguire la richiesta in base allo stato del circuito
-    def call(self,func,*args,**kargs):
+    def call(self,func,*args):
         with self.lock: # Acquisizione del lock
-
             if self.state == "OPEN":
                 time_since_failure = time.time() - self.last_failure_time
                 if time_since_failure >= self.r_timeout:
@@ -32,12 +30,16 @@ class CircuitBreaker:
                 else:
                     # Il circuito è ancora aperto
                     raise CircuitBreakerOpenException("Il circuito è aperto... Chiamata rifiutata.")
+
+            # Per testare il circuito aperto
+            # raise CircuitBreakerOpenException("Il circuito è aperto... Chiamata rifiutata.")
+            
+            # Circuito CLOSED o HALF-OPEN            
             try:
                 # tentativo di esecuzione della richiesta
-                result = func(*args,**kargs)
+                result = func(*args)
 
             except self.e_exception as e: # se la richiesta fallisce
-                
                 self.last_failure_time = time.time()
                 self.f_count +=1
                 if self.f_count >= self.f_threshold:

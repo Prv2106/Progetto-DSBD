@@ -29,7 +29,7 @@ register_user_query = """
 """
 
 # Implementazione del servizio UserService che estende UserServiceServicer generato da protoc
-class UserServiceServicer(usermanagement_pb2_grpc.UserServiceServicer): 
+class UserService(usermanagement_pb2_grpc.UserServiceServicer): 
 
     # Servizio per la registrazione degli utenti
     def RegisterUser(self, request, context):
@@ -47,12 +47,14 @@ class UserServiceServicer(usermanagement_pb2_grpc.UserServiceServicer):
             if request_id in request_cache:
                 if user_id in request_cache[request_id]:
                     logger.info(f"\nRichiesta già elaborata per l'utente {user_id}")
+
                     # Test per il Timeout
-                    time.sleep(1)
+                    # time.sleep(1)
                     return request_cache[request_id][user_id] # ritorniamo la risposta già processata
         try:
             # Logica di registrazione utente
             logger.info(f"\nRegistrazione utente: {request.email}, Ticker: {request.ticker}")
+        
             conn = pymysql.connect(**db_config)
             with conn.cursor() as cursor:
                 cursor.execute(register_user_query, (request.email, request.ticker))
@@ -93,13 +95,14 @@ class UserServiceServicer(usermanagement_pb2_grpc.UserServiceServicer):
 def serve():
     try:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        usermanagement_pb2_grpc.add_UserServiceServicer_to_server(UserServiceServicer(), server)
+        usermanagement_pb2_grpc.add_UserServiceServicer_to_server(UserService(), server)
 
         # Ascolta sulla porta 50051
         server.add_insecure_port('[::]:50051')
         logger.info("Server in ascolto sulla porta 50051...")
         server.start()
         server.wait_for_termination()
+
     except Exception as e:
         logger.error(f"Errore durante l'avvio del server: {e}")
 

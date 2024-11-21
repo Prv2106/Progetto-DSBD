@@ -39,6 +39,11 @@ class UserServiceStub(object):
                 request_serializer=usermanagement__pb2.UserRegisterRequest.SerializeToString,
                 response_deserializer=usermanagement__pb2.UserResponse.FromString,
                 _registered_method=True)
+        self.GetLatestValue = channel.unary_unary(
+                '/usermanagement.UserService/GetLatestValue',
+                request_serializer=usermanagement__pb2.UserIdentifier.SerializeToString,
+                response_deserializer=usermanagement__pb2.StockValueResponse.FromString,
+                _registered_method=True)
 
 
 class UserServiceServicer(object):
@@ -53,6 +58,14 @@ class UserServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetLatestValue(self, request, context):
+        """Metodi per il recupero dei dati
+        rpc GetAverageValue (AverageRequest) returns (AverageResponse);
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_UserServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -60,6 +73,11 @@ def add_UserServiceServicer_to_server(servicer, server):
                     servicer.RegisterUser,
                     request_deserializer=usermanagement__pb2.UserRegisterRequest.FromString,
                     response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
+            ),
+            'GetLatestValue': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetLatestValue,
+                    request_deserializer=usermanagement__pb2.UserIdentifier.FromString,
+                    response_serializer=usermanagement__pb2.StockValueResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -89,6 +107,33 @@ class UserService(object):
             '/usermanagement.UserService/RegisterUser',
             usermanagement__pb2.UserRegisterRequest.SerializeToString,
             usermanagement__pb2.UserResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetLatestValue(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/usermanagement.UserService/GetLatestValue',
+            usermanagement__pb2.UserIdentifier.SerializeToString,
+            usermanagement__pb2.StockValueResponse.FromString,
             options,
             channel_credentials,
             insecure,

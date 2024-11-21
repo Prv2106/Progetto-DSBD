@@ -3,6 +3,7 @@ import usermanagement_pb2
 import usermanagement_pb2_grpc
 import uuid
 
+max_attempts = 10
 
 def register_user(stub):
     # Crea una richiesta per la registrazione utente (modifica i dettagli come desiderato)
@@ -13,29 +14,26 @@ def register_user(stub):
     metadata = [
         ('user_id', email),
         ('request_id', str(uuid.uuid4())) 
-        
     ]
 
-    max_attempts = 10
 
     request = usermanagement_pb2.UserRegisterRequest(email=email, ticker=ticker)
     # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):
         try:
-            # Invoca il metodo RegisterUser e ottieni la risposta
-            response = stub.RegisterUser(request, metadata = metadata,timeout = 2)
+            response = stub.RegisterUser(request, timeout = 2 ,metadata = metadata)
             print(f"\nEsito: {response.success}, Messaggio: {response.message}")
             return
         
-        except grpc.RpcError as error:
-            if error.code() == grpc.StatusCode.DEADLINE_EXCEEDED: # se è scaduto il timeout
+        except grpc.RpcError as err:
+            if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED: # se è scaduto il timeout
                 print("\n############################################################")
                 print(f"Timeout superato, tentativo {attempt + 1} di {max_attempts}")
                 print("############################################################")
                 continue  # Prova un altro tentativo
             
-            elif error.code() in {grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.CANCELLED}:
-                print(f"Errore: {error}")
+            elif err.code() == grpc.StatusCode.UNAVAILABLE:
+                print(f"Errore: {err}")
                 break  # Esce dal ciclo poiché l'errore non è recuperabile
     
     print("Non è stato possibile completare la richiesta")
@@ -91,7 +89,7 @@ def show_menu():
 
 
 def run():
-       # Connessione al server gRPC in ascolto sulla porta 50051
+    # Connessione al server gRPC in ascolto sulla porta 50051
     with grpc.insecure_channel('localhost:50051') as channel:
         # Crea uno stub per il servizio UserService
         stub = usermanagement_pb2_grpc.UserServiceStub(channel)
@@ -103,6 +101,9 @@ def run():
             
             if choice == "1":
                 register_user(stub)
+
+            elif choice == "2":
+                pass
             elif choice == "6":
                 print("Uscita...")
                 break
