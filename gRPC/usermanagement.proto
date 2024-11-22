@@ -36,11 +36,12 @@ message UserResponse {
     string message = 2;
 }
 
-/*
 message UserUpdateRequest {
     string email = 1;
     string new_ticker = 2;
 }
+
+/*
 
 message AverageRequest {
     string email = 1;

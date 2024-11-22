@@ -28,6 +28,7 @@ register_user_query = """
     VALUES (%s,%s);
 """
 
+
 # Implementazione del servizio UserService che estende UserServiceServicer generato da protoc
 class UserService(usermanagement_pb2_grpc.UserServiceServicer): 
 
