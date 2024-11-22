@@ -22,71 +22,332 @@ db_config = {
     "database": "DSBD_progetto"
 }
 
-# QUERYs
+# QUERIES
 register_user_query = """
     INSERT INTO Users (email, ticker)
     VALUES (%s,%s);
 """
+
+login_user_query = """
+    SELECT email
+    FROM Users
+    WHERE email = %s;
+"""
+
+update_user_query = """
+    UPDATE Users
+    SET ticker = %s
+    WHERE email = %s;
+"""
+
+delete_user_query = """
+    DELETE FROM Users
+    WHERE email = %s;
+"""
+
+last_value_query = """
+    SELECT * 
+    FROM Data 
+    WHERE ticker = (SELECT ticker FROM Users WHERE email = %s)
+    ORDER BY timestamp DESC
+    LIMIT 1;
+"""
+
+average_values_query = """
+    SELECT ticker, AVG(valore_euro)
+    FROM (
+        SELECT valore_euro
+        FROM Data
+        WHERE ticker = (SELECT ticker FROM Users WHERE email = %s)
+        ORDER BY timestamp DESC
+        LIMIT %s
+    ) AS ultimi_valori;
+"""
+
+
+
+def extract_metadata(context):
+    metadata = dict(context.invocation_metadata())
+
+    user_id = metadata.get('user_id', "unknown")
+    request_id = metadata.get('request_id', "unknown")
+
+    logger.info(f"\nMetadati ricevuti: UserId -> {user_id}, RequestID -> {request_id}")
+    
+    return user_id, request_id
+
+
+def handle_request_cache(request_id, user_id, request_cache, cache_lock):
+    """
+    Gestisce (l'eventuale) recupero di una richiesta già processata dalla cache.
+    """
+    with cache_lock:
+        # Verifichiamo se la richiesta era stata già processata
+        if request_id in request_cache:
+            if user_id in request_cache[request_id]:
+                logger.info(f"\nRichiesta già elaborata per l'utente {user_id}")
+
+                # Test per il Timeout
+                # time.sleep(1)
+
+                # Ritorniamo la risposta già processata
+                return request_cache[request_id][user_id]
+    
+    # Nessuna risposta trovata nella cache
+    return None
+
+def save_into_cache(request_id, user_id, response, request_cache, cache_lock):
+    """
+    Memorizza una risposta nella cache in modo sicuro utilizzando un lock.
+    """
+    with cache_lock:
+        # Verifica e aggiornamento della cache
+        if request_id not in request_cache:
+            request_cache[request_id] = {}
+        request_cache[request_id][user_id] = response
+
+    # Log dello stato della cache
+    logger.info("#########################################")
+    logger.info(f"Contenuto della cache: {request_cache}")
+
+
+
+#################################################################################################
 
 # Implementazione del servizio UserService che estende UserServiceServicer generato da protoc
 class UserService(usermanagement_pb2_grpc.UserServiceServicer): 
 
     # Servizio per la registrazione degli utenti
     def RegisterUser(self, request, context):
-        
-        # Estrazione dei metadati dal contesto
-        metadata = dict(context.invocation_metadata())
-        user_id = metadata.get('user_id', "unknown")
-        request_id = metadata.get('request_id', "unknown")
+        user_id, request_id = extract_metadata(context)
 
-        logger.info(f"\nMetadati ricevuti: UserId -> {user_id}, RequestID -> {request_id}")
-        
+        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        if result:
+            return result 
+        else:
+            try:
+                # Logica di registrazione utente
+                logger.info(f"\nRegistrazione utente: {request.email}, Ticker: {request.ticker}")
+            
+                conn = pymysql.connect(**db_config)
+                with conn.cursor() as cursor:
+                    cursor.execute(register_user_query, (request.email, request.ticker))
+                    conn.commit()
 
-        with cache_lock:
-            # Verifichiamo se la richiesta era stata già processata
-            if request_id in request_cache:
-                if user_id in request_cache[request_id]:
-                    logger.info(f"\nRichiesta già elaborata per l'utente {user_id}")
+                response = usermanagement_pb2.UserResponse(success=True, message="Utente registrato con successo!")
 
-                    # Test per il Timeout
-                    # time.sleep(1)
-                    return request_cache[request_id][user_id] # ritorniamo la risposta già processata
-        try:
-            # Logica di registrazione utente
-            logger.info(f"\nRegistrazione utente: {request.email}, Ticker: {request.ticker}")
-        
-            conn = pymysql.connect(**db_config)
-            with conn.cursor() as cursor:
-                cursor.execute(register_user_query, (request.email, request.ticker))
-                conn.commit()
+            except pymysql.MySQLError as err:
+                if err.args[0] == 1062:  # Codice per duplicate entry (violazione chiave univoca)
+                    logger.error(f"\nErrore di duplicazione: {err}")
+                    response = usermanagement_pb2.UserResponse(success=False, message="Errore: l'utente con questa email esiste già.")
 
-            response = usermanagement_pb2.UserResponse(success=True, message="Utente registrato con successo!")
+                else:
+                    logger.error(f"\nErrore durante l'inserimento nel database: {err}")
+                    response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
 
-        except pymysql.MySQLError as err:
-            if err.args[0] == 1062:  # Codice per duplicate entry (violazione chiave univoca)
-                logger.error(f"\nErrore di duplicazione: {err}")
-                response = usermanagement_pb2.UserResponse(success=False, message="Errore: l'utente con questa email esiste già.")
+            finally:
+                # Chiudiamo la connessione al database
+                conn.close()
+            
+                # Memorizzazione della risposta nella cache
+                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+            
+        # test per il timeout
+        time.sleep(4)
+        return response
+    
 
-            else:
+    def LoginUser(self, request, context):
+        user_id, request_id = extract_metadata(context)
+
+        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        if result:
+            return result 
+        else:
+            try:
+                # Logica di login utente
+                logger.info(f"\nLogin utente: {request.email}")
+            
+                conn = pymysql.connect(**db_config)
+                with conn.cursor() as cursor:
+                    cursor.execute(login_user_query, (request.email))
+                    result = cursor.fetchone()
+                    if result is None:
+                        response = usermanagement_pb2.UserResponse(success=False, message="Utente non registrato")
+                    else:
+                        response = usermanagement_pb2.UserResponse(success=True, message="Login effettuato!")
+
+            except pymysql.MySQLError as err:
+                if err.args[0] == 1062:  # Codice per duplicate entry (violazione chiave univoca)
+                    logger.error(f"\nErrore di duplicazione: {err}")
+                    response = usermanagement_pb2.UserResponse(success=False, message="Errore: l'utente con questa email esiste già.")
+
+                else:
+                    logger.error(f"\nErrore durante l'inserimento nel database: {err}")
+                    response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
+
+            finally:
+                # Chiudiamo la connessione al database
+                conn.close()
+            
+                # Memorizzazione della risposta nella cache
+                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+            
+        # test per il timeout
+        time.sleep(4)
+        return response
+
+    # Servizio per l'aggiornamento del ticker seguito da un utente
+    def UpdateUser(self, request, context):
+        user_id, request_id = extract_metadata(context)
+
+        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        if result:
+            return result 
+        else:
+            try:
+                # Logica di aggiornamento dell'azione associata a quell'utente
+                logger.info(f"\nAggiornamento ticker utente: {request.email}, Ticker: {request.ticker}")
+            
+                conn = pymysql.connect(**db_config)
+                with conn.cursor() as cursor:
+                    cursor.execute(update_user_query, (request.ticker, request.email))
+                    conn.commit()
+
+                response = usermanagement_pb2.UserResponse(success=True, message="Ticker aggiornato con successo!")
+
+            except pymysql.MySQLError as err:
                 logger.error(f"\nErrore durante l'inserimento nel database: {err}")
                 response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
 
-        finally:
-            # Chiudiamo la connessione al database
-            conn.close()
-                # Log della cache per il debug
-        
-            # Memorizzazione della risposta nella cache
-            with cache_lock:
-                if request_id not in request_cache:
-                    request_cache[request_id] = {}
-                request_cache[request_id][user_id] = response
-                
-            logger.info("#########################################")
-            logger.info(f"Contenuto della cache: {request_cache}")
-
-        
+            finally:
+                # Chiudiamo la connessione al database
+                conn.close()
             
+                # Memorizzazione della risposta nella cache
+                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+
+        # test per il timeout
+        time.sleep(4)
+        return response
+
+
+
+    # eliminazione dell'utente loggato
+    def DeleteUser(self, request, context):
+        user_id, request_id = extract_metadata(context)
+
+        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        if result:
+            return result 
+        else:
+            try:
+                logger.info(f"\nEliminazione dell'utente: {request.email}")
+            
+                conn = pymysql.connect(**db_config)
+                with conn.cursor() as cursor:
+                    cursor.execute(delete_user_query, (request.email))
+                    conn.commit()
+
+                response = usermanagement_pb2.UserResponse(success=True, message="Sei stato eliminato!")
+
+            except pymysql.MySQLError as err:
+                # Log dell'errore SQL
+                logger.error(f"Errore durante l'eliminazione dell'utente: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message="Errore durante l'eliminazione dell'utente. Riprovare più tardi.")
+            
+            except Exception as e:
+                # Log per errori generici
+                logger.error(f"Errore inatteso durante l'eliminazione dell'utente: {e}")
+                response = usermanagement_pb2.UserResponse(success=False, message="Si è verificato un errore imprevisto.")
+
+            finally:
+                # Chiudiamo la connessione al database
+                conn.close()
+            
+                # Memorizzazione della risposta nella cache
+                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+
+        # test per il timeout
+        time.sleep(4)
+        return response
+    
+
+    # recupero dell'ultimo valore
+    def GetLastValue(self, request, context):
+        user_id, request_id = extract_metadata(context)
+
+        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        if result:
+            return result 
+        else:
+            try:
+                logger.info(f"\nRecupero ultimo valor del ticker seguito dall'utente: {request.email}")
+            
+                conn = pymysql.connect(**db_config)
+                with conn.cursor() as cursor:
+                    cursor.execute(last_value_query, (request.email))
+                    result = cursor.fetchone()
+
+                response = usermanagement_pb2.StockValueResponse(timestamp = result[0], ticker = result[1], value = result[2])
+
+            except pymysql.MySQLError as err:
+                # Log dell'errore SQL
+                logger.error(f"Errore durante il recupero dell'informazione dal database: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message="Errore durante il recupero dell'informazione dal database. Riprovare più tardi.")
+            
+            except Exception as e:
+                # Log per errori generici
+                logger.error(f"Errore inatteso: {e}")
+                response = usermanagement_pb2.UserResponse(success=False, message="Si è verificato un errore imprevisto.")
+
+            finally:
+                # Chiudiamo la connessione al database
+                conn.close()
+            
+                # Memorizzazione della risposta nella cache
+                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+
+        # test per il timeout
+        time.sleep(4)
+        return response
+
+
+    # recupero della media degli X valori
+    def GetAverageValue(self, request, context):
+        user_id, request_id = extract_metadata(context)
+
+        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        if result:
+            return result 
+        else:
+            try:
+                logger.info(f"\nRecupero media degli ultimi {request.num_values} valori del ticker seguito dall'utente: {request.email}")
+            
+                conn = pymysql.connect(**db_config)
+                with conn.cursor() as cursor:
+                    cursor.execute(average_values_query, (request.email))
+                    result = cursor.fetchone()
+
+                response = usermanagement_pb2.AverageResponse(result[0], result[1])
+
+            except pymysql.MySQLError as err:
+                # Log dell'errore SQL
+                logger.error(f"Errore durante il recupero dell'informazione dal database: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message="Errore durante il recupero dell'informazione dal database. Riprovare più tardi.")
+            
+            except Exception as e:
+                # Log per errori generici
+                logger.error(f"Errore inatteso: {e}")
+                response = usermanagement_pb2.UserResponse(success=False, message="Si è verificato un errore imprevisto.")
+
+            finally:
+                # Chiudiamo la connessione al database
+                conn.close()
+            
+                # Memorizzazione della risposta nella cache
+                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+
         # test per il timeout
         time.sleep(4)
         return response

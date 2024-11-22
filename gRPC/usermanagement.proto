@@ -5,24 +5,40 @@ package usermanagement;
 service UserService {
     // Metodi per la gestione degli utenti
     rpc RegisterUser (UserRegisterRequest) returns (UserResponse);
-   // rpc UpdateUser (UserUpdateRequest) returns (UserResponse);
-   // rpc DeleteUser (UserIdentifier) returns (UserResponse);
+    rpc UpdateUser (UserUpdateRequest) returns (UserResponse);
+    rpc DeleteUser (UserIdentifier) returns (UserResponse);
     
     // Metodi per il recupero dei dati
     rpc GetLatestValue (UserIdentifier) returns (StockValueResponse);
-   // rpc GetAverageValue (AverageRequest) returns (AverageResponse);
+    rpc GetAverageValue (AverageRequest) returns (AverageResponse);
 }
 
-// Messaggi per le richieste e risposte
+
+// Messaggi per le richieste
 message UserRegisterRequest {
     string email = 1;
     string ticker = 2;
 }
 
-
+message UserUpdateRequest {
+    string email = 1;
+    string new_ticker = 2;
+}
 
 message UserIdentifier {
     string email = 1;
+}
+
+message AverageRequest {
+    string email = 1;
+    int32 num_values = 2;
+}
+
+
+// Messaggi per le risposte
+message UserResponse {
+    bool success = 1;
+    string message = 2;
 }
 
 message StockValueResponse {
@@ -31,24 +47,7 @@ message StockValueResponse {
     string timestamp = 3;
 }
 
-message UserResponse {
-    bool success = 1;
-    string message = 2;
-}
-
-/*
-message UserUpdateRequest {
-    string email = 1;
-    string new_ticker = 2;
-}
-
-message AverageRequest {
-    string email = 1;
-    int32 num_values = 2;
-}
-
 message AverageResponse {
     string ticker = 1;
     float average = 2;
 }
-*/
