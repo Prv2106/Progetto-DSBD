@@ -81,7 +81,7 @@ def fetch_ticker_from_db(conn):
             return tickers
         
     except Exception as e:
-        print(f"Errore durante il recupero dei ticker, codice di errore: {e}")
+        print(f"data_collector: Errore durante il recupero dei ticker, codice di errore: {e}")
         return []
 
 
@@ -100,10 +100,10 @@ def data_collector():
                 try:
                     # Otteniamo i ticker dalla tabella Users
                     tickers = fetch_ticker_from_db(conn)
-                    print(f"data_collector.py: Lista dei Ticker recuperati: {tickers}")
+                    print(f"data_collector: Lista dei Ticker recuperati: {tickers}")
 
                     if not tickers:
-                        print("data_collector.py: Nessun ticker trovato nella tabella Users")
+                        print("data_collector: Nessun ticker trovato nella tabella Users")
                         continue
 
                     with conn.cursor() as cursor:
@@ -150,7 +150,7 @@ def data_collector():
                     print(f"data_collector: Errore {e}")
 
     except pymysql.MySQLError as e:
-        print(f"Tentativo di connessione al database fallito, codice di errore: {e}")
+        print(f"data_collector: Tentativo di connessione al database fallito, codice di errore: {e}")
         return
 
 
