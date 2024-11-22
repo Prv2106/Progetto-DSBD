@@ -22,7 +22,7 @@ services:
       - net2
     container_name: data_collector
     restart: always
-
+    
   server-grpc:
     build:
       context: ./gRPC

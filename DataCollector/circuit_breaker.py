@@ -5,6 +5,16 @@ import pytz
 
 tz = pytz.timezone('Europe/Rome') 
 
+
+
+
+
+def unreliable_service():
+    # metodo per testare il circuit breaker
+    raise Exception("circuit_breaker: Test di errore")
+
+
+
 class CircuitBreaker:
 
     # Metodo costruttore
@@ -18,43 +28,64 @@ class CircuitBreaker:
         self.f_count = 0 # contatore degli errori
         self.lock = threading.Lock()  # Creazione di un lock per la gestione di una sezione critica
         self.e_exception = e_exception
-
+        self.s_count = 0 # contatore dei successi
+        self.s_threshold = 3 # soglia di richieste eseguite con successo, oltre la quale il cirxuito viene chiusoù
+        
+        self.test_mode = True # Flag da abilitare per testare il passaggio da stato OPEN ad HALF_OPEN e da HALF_OPEN a CLOSED in modo forzato
+        self.t_threshold = 3 # numero di volte in cui effettuare il test
+        self.t_count = 0 # contatore per il test
 
     # Metodo che si occupa di eseguire la richiesta in base allo stato del circuito
     def call(self,func,*args):
-        with self.lock: # Acquisizione del lock
-            if self.state == "OPEN":
-                time_since_failure = time.time() - self.last_failure_time
-                if time_since_failure >= self.r_timeout:
-                    self.state = "HALF_OPEN"
-                else:
-                    # Il circuito è ancora aperto
-                    raise CircuitBreakerOpenException("Il circuito è aperto... Chiamata rifiutata.")
 
-            # Per testare il circuito aperto
-            # raise CircuitBreakerOpenException("Il circuito è aperto... Chiamata rifiutata.")
-            
-            # Circuito CLOSED o HALF-OPEN            
-            try:
-                # tentativo di esecuzione della richiesta
+        print(f"circuit_breaker: stato corrente del circuito -> {self.state}")
+
+        if self.state == "OPEN":
+            time_since_failure = time.time() - self.last_failure_time
+            if time_since_failure >= self.r_timeout:
+                self.state = "HALF_OPEN"
+                self.f_count = 0
+                print("circuit_breaker: Recovery Timeout superato, nuovo stato -> HALF_OPEN")
+            else:
+                # Il circuito è ancora aperto
+                raise CircuitBreakerOpenException("circuit_breaker: Il circuito è aperto... Chiamata rifiutata.")
+
+
+        # Circuito CLOSED o HALF-OPEN            
+        try:
+            # Per testare il circuito OPEN, HALF_OPEN
+            #################TEST#########################
+            if  self.state == "CLOSED" and self.test_mode and self.t_count <= self.t_threshold:
+                self.t_count += 1
+                unreliable_service()
+            #################TEST#########################
+            else:
+                 # tentativo di esecuzione della richiesta
                 result = func(*args)
+            
 
-            except self.e_exception as e: # se la richiesta fallisce
-                self.last_failure_time = time.time()
-                self.f_count +=1
-                if self.f_count >= self.f_threshold:
-                    self.state = "OPEN"
-                raise e # rilancia al chiamante l'eccezione generata
+        except self.e_exception as e: # se la richiesta fallisce
+            self.last_failure_time = time.time()
+            self.f_count = self.f_count + 1
+            print(f"circuit_breaker: Errore nella richiesta al servizio, failure_count -> {self.f_count}")
+            if self.f_count >= self.f_threshold:
+                print("circuit_breaker: Soglia di failure superata, nuovo stato -> OPEN")
+                self.state = "OPEN"
+            raise e # rilancia al chiamante l'eccezione generata
                 
             
-            # se la richiesta viene eseguita con successo 
-            else:
-                if self.state == "HALF_OPEN":
-                    self.f_count = 0
+        # se la richiesta viene eseguita con successo 
+        else:
+            if self.state == "HALF_OPEN":
+                self.s_count += 1
+                if self.s_count >= self.s_threshold:
+                    print(f"circuit_breaker: Richieste eseguite con successo pari a {self.s_count}, nuovo stato -> CLOSED")
                     self.state = "CLOSED"
+                    self.s_count = 0
 
-                print(f"Circuit Breaker: richiesta eseguita con successo ({datetime.now(tz)})")
-                return result
+            print(f"circuit_breaker: richiesta eseguita con successo ({datetime.now(tz)})")
+            return result
+       
 
 class CircuitBreakerOpenException(Exception): # classe che estende Exception
     pass
