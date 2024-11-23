@@ -24,8 +24,8 @@ db_config = {
 
 # QUERIES
 register_user_query = """
-    INSERT INTO Users (email, ticker)
-    VALUES (%s,%s);
+    INSERT INTO Users (email, pwd, ticker)
+    VALUES (%s, %s, %s);
 """
 
 login_user_query = """
@@ -141,7 +141,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             
                 conn = pymysql.connect(**db_config)
                 with conn.cursor() as cursor:
-                    cursor.execute(register_user_query, (request.email, request.ticker))
+                    cursor.execute(register_user_query, (request.email, request.password, request.ticker))
                     conn.commit()
 
                 response = usermanagement_pb2.UserResponse(success=True, message="Utente registrato con successo!")

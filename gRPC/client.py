@@ -14,10 +14,10 @@ email = ''
 def register_user(stub):
     # Crea una richiesta per la registrazione utente (modifica i dettagli come desiderato)
     global email
+
     email = input("Inserisci la tua email: ")
     password = input("Inserisci la tua password: ") 
     ticker = input("Inserisci il ticker del tuo investimento: ")
-
 
     metadata = [
         ('user_id', email),
@@ -25,7 +25,7 @@ def register_user(stub):
     ]
     print(f"Metadati che verranno passati al server: {metadata}")
 
-    request = usermanagement_pb2.UserRegisterRequest(email=email, password = password, ticker=ticker) # decode() per convertire da byte a stringa
+    request = usermanagement_pb2.UserRegisterRequest(email=email, password=password, ticker=ticker) # decode() per convertire da byte a stringa
 
     # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):
