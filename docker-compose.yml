@@ -34,6 +34,7 @@ services:
     container_name: server
     ports:
       - "50051:50051"
+    restart: always
 
 networks:
   net1:

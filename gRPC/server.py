@@ -54,14 +54,15 @@ last_value_query = """
 """
 
 average_values_query = """
-    SELECT ticker, AVG(valore_euro)
+    SELECT ticker, AVG(valore_euro) AS media_valore
     FROM (
-        SELECT valore_euro
+        SELECT *
         FROM Data
-        WHERE ticker = (SELECT ticker FROM Users WHERE email = %s)
+        WHERE ticker = (SELECT ticker FROM Users WHERE email = %s) 
         ORDER BY timestamp DESC
         LIMIT %s
-    ) AS ultimi_valori;
+     ) AS ultimi_valori
+    GROUP BY ticker;
 """
 
 
@@ -77,7 +78,7 @@ def extract_metadata(context):
     return user_id, request_id
 
 
-def handle_request_cache(request_id, user_id, request_cache, cache_lock):
+def handle_request_cache(request_id, user_id):
     """
     Gestisce (l'eventuale) recupero di una richiesta già processata dalla cache.
     """
@@ -96,7 +97,7 @@ def handle_request_cache(request_id, user_id, request_cache, cache_lock):
     # Nessuna risposta trovata nella cache
     return None
 
-def save_into_cache(request_id, user_id, response, request_cache, cache_lock):
+def save_into_cache(request_id, user_id, response):
     """
     Memorizza una risposta nella cache in modo sicuro utilizzando un lock.
     """
@@ -119,10 +120,15 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
     # Servizio per la registrazione degli utenti
     def RegisterUser(self, request, context):
+
+        
+        logger.info("Funzione Register_users")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        result = handle_request_cache(request_id, user_id)
         if result:
+            # test per il timeout
+            time.sleep(1)
             return result 
         else:
             try:
@@ -150,7 +156,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 conn.close()
             
                 # Memorizzazione della risposta nella cache
-                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+                save_into_cache(request_id, user_id, response)
             
         # test per il timeout
         time.sleep(4)
@@ -158,10 +164,13 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
     
 
     def LoginUser(self, request, context):
+        logger.info("Funzione login_user")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        result = handle_request_cache(request_id, user_id)
         if result:
+            # test per il timeout
+            time.sleep(1)
             return result 
         else:
             try:
@@ -178,31 +187,30 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                         response = usermanagement_pb2.UserResponse(success=True, message="Login effettuato!")
 
             except pymysql.MySQLError as err:
-                if err.args[0] == 1062:  # Codice per duplicate entry (violazione chiave univoca)
-                    logger.error(f"\nErrore di duplicazione: {err}")
-                    response = usermanagement_pb2.UserResponse(success=False, message="Errore: l'utente con questa email esiste già.")
-
-                else:
-                    logger.error(f"\nErrore durante l'inserimento nel database: {err}")
-                    response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
+                logger.error(f"\nErrore durante l'inserimento nel database: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
 
             finally:
                 # Chiudiamo la connessione al database
                 conn.close()
             
                 # Memorizzazione della risposta nella cache
-                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+                save_into_cache(request_id, user_id, response)
             
         # test per il timeout
         time.sleep(4)
         return response
 
+
     # Servizio per l'aggiornamento del ticker seguito da un utente
     def UpdateUser(self, request, context):
+        logger.info("Funzione login_user")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        result = handle_request_cache(request_id, user_id)
         if result:
+            # test per il timeout
+            time.sleep(1)
             return result 
         else:
             try:
@@ -225,7 +233,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 conn.close()
             
                 # Memorizzazione della risposta nella cache
-                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+                save_into_cache(request_id, user_id, response)
 
         # test per il timeout
         time.sleep(4)
@@ -235,10 +243,13 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
     # eliminazione dell'utente loggato
     def DeleteUser(self, request, context):
+        logger.info("Funzione DeleteUser")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        result = handle_request_cache(request_id, user_id)
         if result:
+            # test per il timeout
+            time.sleep(1)
             return result 
         else:
             try:
@@ -266,7 +277,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 conn.close()
             
                 # Memorizzazione della risposta nella cache
-                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+                save_into_cache(request_id, user_id, response)
 
         # test per il timeout
         time.sleep(4)
@@ -274,39 +285,41 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
     
 
     # recupero dell'ultimo valore
-    def GetLastValue(self, request, context):
+    def GetLatestValue(self, request, context):
+        logger.info("Funzione GetLatestValue")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        result = handle_request_cache(request_id, user_id)
         if result:
+            # test per il timeout
+            time.sleep(1)
             return result 
         else:
             try:
-                logger.info(f"\nRecupero ultimo valor del ticker seguito dall'utente: {request.email}")
+                logger.info(f"\nRecupero ultimo valore del ticker seguito dall'utente: {request.email}")
             
                 conn = pymysql.connect(**db_config)
                 with conn.cursor() as cursor:
                     cursor.execute(last_value_query, (request.email))
                     result = cursor.fetchone()
+                    logger.info(f"\nresult: {result}")
+                    timestamp, ticker, value = result
+        
+                    logger.info(f"\timestamp: {timestamp}, ticker: {ticker}, value: {value}")
 
-                response = usermanagement_pb2.StockValueResponse(timestamp = result[0], ticker = result[1], value = result[2])
+                response = usermanagement_pb2.StockValueResponse(success = True, message = "Valore recuperato", timestamp = str(timestamp), ticker = ticker, value = float(value))
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
                 logger.error(f"Errore durante il recupero dell'informazione dal database: {err}")
-                response = usermanagement_pb2.UserResponse(success=False, message="Errore durante il recupero dell'informazione dal database. Riprovare più tardi.")
-            
-            except Exception as e:
-                # Log per errori generici
-                logger.error(f"Errore inatteso: {e}")
-                response = usermanagement_pb2.UserResponse(success=False, message="Si è verificato un errore imprevisto.")
+                response = usermanagement_pb2.StockValueResponse(success=False, message="Errore durante il recupero dell'informazione dal database. Riprovare più tardi.")
 
             finally:
                 # Chiudiamo la connessione al database
                 conn.close()
             
                 # Memorizzazione della risposta nella cache
-                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+                save_into_cache(request_id, user_id, response)
 
         # test per il timeout
         time.sleep(4)
@@ -315,10 +328,13 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
     # recupero della media degli X valori
     def GetAverageValue(self, request, context):
+        logger.info("Funzione GetAverageValue")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id, request_cache, cache_lock)
+        result = handle_request_cache(request_id, user_id)
         if result:
+            # test per il timeout
+            time.sleep(1)
             return result 
         else:
             try:
@@ -326,27 +342,30 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             
                 conn = pymysql.connect(**db_config)
                 with conn.cursor() as cursor:
-                    cursor.execute(average_values_query, (request.email))
+                    cursor.execute(average_values_query, (request.email, request.num_values))
                     result = cursor.fetchone()
+                    ticker, average = result
 
-                response = usermanagement_pb2.AverageResponse(result[0], result[1])
+                    logger.info(f"\ticker: {ticker}, average: {average}")
+
+                response = usermanagement_pb2.AverageResponse(success=True, message="Media recuperata con successo", ticker = ticker, average = float(average))
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
                 logger.error(f"Errore durante il recupero dell'informazione dal database: {err}")
-                response = usermanagement_pb2.UserResponse(success=False, message="Errore durante il recupero dell'informazione dal database. Riprovare più tardi.")
+                response = usermanagement_pb2.AverageResponse(success=False, message="Errore durante il recupero dell'informazione dal database. Riprovare più tardi.")
             
             except Exception as e:
                 # Log per errori generici
                 logger.error(f"Errore inatteso: {e}")
-                response = usermanagement_pb2.UserResponse(success=False, message="Si è verificato un errore imprevisto.")
+                response = usermanagement_pb2.AverageResponse(success=False, message="Si è verificato un errore imprevisto.")
 
             finally:
                 # Chiudiamo la connessione al database
                 conn.close()
             
                 # Memorizzazione della risposta nella cache
-                save_into_cache(request_id, user_id, response, request_cache, cache_lock)
+                save_into_cache(request_id, user_id, response)
 
         # test per il timeout
         time.sleep(4)

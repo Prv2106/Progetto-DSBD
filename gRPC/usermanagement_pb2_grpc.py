@@ -5,7 +5,7 @@ import warnings
 
 import usermanagement_pb2 as usermanagement__pb2
 
-GRPC_GENERATED_VERSION = '1.67.0'
+GRPC_GENERATED_VERSION = '1.68.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -39,10 +39,30 @@ class UserServiceStub(object):
                 request_serializer=usermanagement__pb2.UserRegisterRequest.SerializeToString,
                 response_deserializer=usermanagement__pb2.UserResponse.FromString,
                 _registered_method=True)
+        self.UpdateUser = channel.unary_unary(
+                '/usermanagement.UserService/UpdateUser',
+                request_serializer=usermanagement__pb2.UserUpdateRequest.SerializeToString,
+                response_deserializer=usermanagement__pb2.UserResponse.FromString,
+                _registered_method=True)
+        self.DeleteUser = channel.unary_unary(
+                '/usermanagement.UserService/DeleteUser',
+                request_serializer=usermanagement__pb2.UserIdentifier.SerializeToString,
+                response_deserializer=usermanagement__pb2.UserResponse.FromString,
+                _registered_method=True)
+        self.LoginUser = channel.unary_unary(
+                '/usermanagement.UserService/LoginUser',
+                request_serializer=usermanagement__pb2.UserIdentifier.SerializeToString,
+                response_deserializer=usermanagement__pb2.UserResponse.FromString,
+                _registered_method=True)
         self.GetLatestValue = channel.unary_unary(
                 '/usermanagement.UserService/GetLatestValue',
                 request_serializer=usermanagement__pb2.UserIdentifier.SerializeToString,
                 response_deserializer=usermanagement__pb2.StockValueResponse.FromString,
+                _registered_method=True)
+        self.GetAverageValue = channel.unary_unary(
+                '/usermanagement.UserService/GetAverageValue',
+                request_serializer=usermanagement__pb2.AverageRequest.SerializeToString,
+                response_deserializer=usermanagement__pb2.AverageResponse.FromString,
                 _registered_method=True)
 
 
@@ -51,17 +71,38 @@ class UserServiceServicer(object):
 
     def RegisterUser(self, request, context):
         """Metodi per la gestione degli utenti
-        rpc UpdateUser (UserUpdateRequest) returns (UserResponse);
-        rpc DeleteUser (UserIdentifier) returns (UserResponse);
         """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateUser(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteUser(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def LoginUser(self, request, context):
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def GetLatestValue(self, request, context):
         """Metodi per il recupero dei dati
-        rpc GetAverageValue (AverageRequest) returns (AverageResponse);
         """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetAverageValue(self, request, context):
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -74,10 +115,30 @@ def add_UserServiceServicer_to_server(servicer, server):
                     request_deserializer=usermanagement__pb2.UserRegisterRequest.FromString,
                     response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
             ),
+            'UpdateUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateUser,
+                    request_deserializer=usermanagement__pb2.UserUpdateRequest.FromString,
+                    response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
+            ),
+            'DeleteUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteUser,
+                    request_deserializer=usermanagement__pb2.UserIdentifier.FromString,
+                    response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
+            ),
+            'LoginUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.LoginUser,
+                    request_deserializer=usermanagement__pb2.UserIdentifier.FromString,
+                    response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
+            ),
             'GetLatestValue': grpc.unary_unary_rpc_method_handler(
                     servicer.GetLatestValue,
                     request_deserializer=usermanagement__pb2.UserIdentifier.FromString,
                     response_serializer=usermanagement__pb2.StockValueResponse.SerializeToString,
+            ),
+            'GetAverageValue': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAverageValue,
+                    request_deserializer=usermanagement__pb2.AverageRequest.FromString,
+                    response_serializer=usermanagement__pb2.AverageResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -118,6 +179,87 @@ class UserService(object):
             _registered_method=True)
 
     @staticmethod
+    def UpdateUser(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/usermanagement.UserService/UpdateUser',
+            usermanagement__pb2.UserUpdateRequest.SerializeToString,
+            usermanagement__pb2.UserResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteUser(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/usermanagement.UserService/DeleteUser',
+            usermanagement__pb2.UserIdentifier.SerializeToString,
+            usermanagement__pb2.UserResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def LoginUser(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/usermanagement.UserService/LoginUser',
+            usermanagement__pb2.UserIdentifier.SerializeToString,
+            usermanagement__pb2.UserResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
     def GetLatestValue(request,
             target,
             options=(),
@@ -134,6 +276,33 @@ class UserService(object):
             '/usermanagement.UserService/GetLatestValue',
             usermanagement__pb2.UserIdentifier.SerializeToString,
             usermanagement__pb2.StockValueResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetAverageValue(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/usermanagement.UserService/GetAverageValue',
+            usermanagement__pb2.AverageRequest.SerializeToString,
+            usermanagement__pb2.AverageResponse.FromString,
             options,
             channel_credentials,
             insecure,

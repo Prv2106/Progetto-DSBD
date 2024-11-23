@@ -132,7 +132,7 @@ def data_collector():
 
                                 # Se ci sono più di maximum_occurrences, eliminiamo la più vecchia
                                 if count > maximum_occurrences:
-                                    cursor.execute(delete_old_query, (ticker,))
+                                    cursor.execute(delete_old_query, (ticker))
                                 
                                 print(f"data_collector: Ticker '{ticker}' aggiornato con successo, prezzo in uscita -> {price_in_eur:.2f} ({datetime.now(tz)})")
 
