@@ -215,11 +215,11 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         else:
             try:
                 # Logica di aggiornamento dell'azione associata a quell'utente
-                logger.info(f"\nAggiornamento ticker utente: {request.email}, Ticker: {request.ticker}")
+                logger.info(f"\nAggiornamento ticker utente: {request.email}, Ticker: {request.new_ticker}")
             
                 conn = pymysql.connect(**db_config)
                 with conn.cursor() as cursor:
-                    cursor.execute(update_user_query, (request.ticker, request.email))
+                    cursor.execute(update_user_query, (request.new_ticker, request.email))
                     conn.commit()
 
                 response = usermanagement_pb2.UserResponse(success=True, message="Ticker aggiornato con successo!")

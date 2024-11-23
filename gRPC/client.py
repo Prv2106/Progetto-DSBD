@@ -94,7 +94,7 @@ def update_user(stub):
     ]
 
     # andiamo a "inizializzare" il messaggio di richiesta del file .proto
-    request = usermanagement_pb2.UserUpdateRequest(email=email, ticker=ticker)
+    request = usermanagement_pb2.UserUpdateRequest(email=email, new_ticker=ticker)
 
     # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):
