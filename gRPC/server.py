@@ -66,7 +66,7 @@ average_values_query = """
 """
 
 count_ticker_query = """
-    SELECT COUNT(*) FROM Data WHERE ticker = %s
+    SELECT COUNT(*) FROM Data WHERE ticker = (SELECT ticker FROM Users WHERE email = %s) 
 """
 
 
@@ -349,11 +349,19 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                     cursor.execute(average_values_query, (request.email, request.num_values))
                     result = cursor.fetchone()
                     if result is None:
-                        response = usermanagement_pb2.StockValueResponse(success = False, message = "Nessun valore disponibile per il ticker registrato")
+                        response = usermanagement_pb2.AverageResponse(success = False, message = "Nessun valore disponibile per il ticker registrato")
                     else: 
                         ticker, average = result
-                        logger.info(f"\ticker: {ticker}, average: {average}")
-                        response = usermanagement_pb2.AverageResponse(success=True, message="Media recuperata con successo", ticker = ticker, average = float(average))
+                        logger.info(f"\nticker: {ticker}, average: {average}")
+
+                        # facciamo anche la query per vedere quante occorrenze ci sono
+                        cursor.execute(count_ticker_query, (request.email))
+                        count = cursor.fetchone()[0]
+                        note_text = ''
+                        if count < request.num_values: # se sono presenti nel DB meno valori di quelli indicati
+                            note_text = f"\n N.B: il valore inserito ({request.num_values}) è maggiore al massimo numero di valori presenti nel database ({count}))"
+
+                        response = usermanagement_pb2.AverageResponse(success=True, message=f"Media recuperata con successo {note_text}", ticker = ticker, average = float(average))
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
