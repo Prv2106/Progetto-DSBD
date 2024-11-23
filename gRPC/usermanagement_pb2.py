@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14usermanagement.proto\x12\x0eusermanagement\"4\n\x13UserRegisterRequest\x12\r\n\x05\x65mail\x18\x01 \x01(\t\x12\x0e\n\x06ticker\x18\x02 \x01(\t\"6\n\x11UserUpdateRequest\x12\r\n\x05\x65mail\x18\x01 \x01(\t\x12\x12\n\nnew_ticker\x18\x02 \x01(\t\"\x1f\n\x0eUserIdentifier\x12\r\n\x05\x65mail\x18\x01 \x01(\t\"3\n\x0e\x41verageRequest\x12\r\n\x05\x65mail\x18\x01 \x01(\t\x12\x12\n\nnum_values\x18\x02 \x01(\x05\"0\n\x0cUserResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"h\n\x12StockValueResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0e\n\x06ticker\x18\x03 \x01(\t\x12\r\n\x05value\x18\x04 \x01(\x02\x12\x11\n\ttimestamp\x18\x05 \x01(\t\"T\n\x0f\x41verageResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0e\n\x06ticker\x18\x03 \x01(\t\x12\x0f\n\x07\x61verage\x18\x04 \x01(\x02\x32\xf0\x03\n\x0bUserService\x12Q\n\x0cRegisterUser\x12#.usermanagement.UserRegisterRequest\x1a\x1c.usermanagement.UserResponse\x12M\n\nUpdateUser\x12!.usermanagement.UserUpdateRequest\x1a\x1c.usermanagement.UserResponse\x12J\n\nDeleteUser\x12\x1e.usermanagement.UserIdentifier\x1a\x1c.usermanagement.UserResponse\x12I\n\tLoginUser\x12\x1e.usermanagement.UserIdentifier\x1a\x1c.usermanagement.UserResponse\x12T\n\x0eGetLatestValue\x12\x1e.usermanagement.UserIdentifier\x1a\".usermanagement.StockValueResponse\x12R\n\x0fGetAverageValue\x12\x1e.usermanagement.AverageRequest\x1a\x1f.usermanagement.AverageResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14usermanagement.proto\x12\x0eusermanagement\"F\n\x13UserRegisterRequest\x12\r\n\x05\x65mail\x18\x01 \x01(\t\x12\x10\n\x08password\x18\x02 \x01(\t\x12\x0e\n\x06ticker\x18\x03 \x01(\t\"6\n\x11UserUpdateRequest\x12\r\n\x05\x65mail\x18\x01 \x01(\t\x12\x12\n\nnew_ticker\x18\x02 \x01(\t\"3\n\x10UserLoginRequest\x12\r\n\x05\x65mail\x18\x01 \x01(\t\x12\x10\n\x08password\x18\x02 \x01(\t\"\x1f\n\x0eUserIdentifier\x12\r\n\x05\x65mail\x18\x01 \x01(\t\"3\n\x0e\x41verageRequest\x12\r\n\x05\x65mail\x18\x01 \x01(\t\x12\x12\n\nnum_values\x18\x02 \x01(\x05\"0\n\x0cUserResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"h\n\x12StockValueResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0e\n\x06ticker\x18\x03 \x01(\t\x12\r\n\x05value\x18\x04 \x01(\x02\x12\x11\n\ttimestamp\x18\x05 \x01(\t\"T\n\x0f\x41verageResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0e\n\x06ticker\x18\x03 \x01(\t\x12\x0f\n\x07\x61verage\x18\x04 \x01(\x02\x32\xf2\x03\n\x0bUserService\x12Q\n\x0cRegisterUser\x12#.usermanagement.UserRegisterRequest\x1a\x1c.usermanagement.UserResponse\x12M\n\nUpdateUser\x12!.usermanagement.UserUpdateRequest\x1a\x1c.usermanagement.UserResponse\x12J\n\nDeleteUser\x12\x1e.usermanagement.UserIdentifier\x1a\x1c.usermanagement.UserResponse\x12K\n\tLoginUser\x12 .usermanagement.UserLoginRequest\x1a\x1c.usermanagement.UserResponse\x12T\n\x0eGetLatestValue\x12\x1e.usermanagement.UserIdentifier\x1a\".usermanagement.StockValueResponse\x12R\n\x0fGetAverageValue\x12\x1e.usermanagement.AverageRequest\x1a\x1f.usermanagement.AverageResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,19 +32,21 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'usermanagement_pb2', _globa
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_USERREGISTERREQUEST']._serialized_start=40
-  _globals['_USERREGISTERREQUEST']._serialized_end=92
-  _globals['_USERUPDATEREQUEST']._serialized_start=94
-  _globals['_USERUPDATEREQUEST']._serialized_end=148
-  _globals['_USERIDENTIFIER']._serialized_start=150
-  _globals['_USERIDENTIFIER']._serialized_end=181
-  _globals['_AVERAGEREQUEST']._serialized_start=183
-  _globals['_AVERAGEREQUEST']._serialized_end=234
-  _globals['_USERRESPONSE']._serialized_start=236
-  _globals['_USERRESPONSE']._serialized_end=284
-  _globals['_STOCKVALUERESPONSE']._serialized_start=286
-  _globals['_STOCKVALUERESPONSE']._serialized_end=390
-  _globals['_AVERAGERESPONSE']._serialized_start=392
-  _globals['_AVERAGERESPONSE']._serialized_end=476
-  _globals['_USERSERVICE']._serialized_start=479
-  _globals['_USERSERVICE']._serialized_end=975
+  _globals['_USERREGISTERREQUEST']._serialized_end=110
+  _globals['_USERUPDATEREQUEST']._serialized_start=112
+  _globals['_USERUPDATEREQUEST']._serialized_end=166
+  _globals['_USERLOGINREQUEST']._serialized_start=168
+  _globals['_USERLOGINREQUEST']._serialized_end=219
+  _globals['_USERIDENTIFIER']._serialized_start=221
+  _globals['_USERIDENTIFIER']._serialized_end=252
+  _globals['_AVERAGEREQUEST']._serialized_start=254
+  _globals['_AVERAGEREQUEST']._serialized_end=305
+  _globals['_USERRESPONSE']._serialized_start=307
+  _globals['_USERRESPONSE']._serialized_end=355
+  _globals['_STOCKVALUERESPONSE']._serialized_start=357
+  _globals['_STOCKVALUERESPONSE']._serialized_end=461
+  _globals['_AVERAGERESPONSE']._serialized_start=463
+  _globals['_AVERAGERESPONSE']._serialized_end=547
+  _globals['_USERSERVICE']._serialized_start=550
+  _globals['_USERSERVICE']._serialized_end=1048
 # @@protoc_insertion_point(module_scope)

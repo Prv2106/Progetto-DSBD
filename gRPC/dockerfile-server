@@ -2,9 +2,11 @@ FROM python:3.9
 
 WORKDIR /app
 
-RUN pip install grpcio grpcio-tools
+RUN pip install grpcio==1.68.0 grpcio-tools==1.68.0
 
 RUN pip install pymysql
+
+RUN pip install bcrypt pymysql
 
 
 COPY usermanagement_pb2.py usermanagement_pb2_grpc.py server.py /app/

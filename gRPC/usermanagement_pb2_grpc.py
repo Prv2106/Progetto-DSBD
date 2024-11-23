@@ -51,7 +51,7 @@ class UserServiceStub(object):
                 _registered_method=True)
         self.LoginUser = channel.unary_unary(
                 '/usermanagement.UserService/LoginUser',
-                request_serializer=usermanagement__pb2.UserIdentifier.SerializeToString,
+                request_serializer=usermanagement__pb2.UserLoginRequest.SerializeToString,
                 response_deserializer=usermanagement__pb2.UserResponse.FromString,
                 _registered_method=True)
         self.GetLatestValue = channel.unary_unary(
@@ -127,7 +127,7 @@ def add_UserServiceServicer_to_server(servicer, server):
             ),
             'LoginUser': grpc.unary_unary_rpc_method_handler(
                     servicer.LoginUser,
-                    request_deserializer=usermanagement__pb2.UserIdentifier.FromString,
+                    request_deserializer=usermanagement__pb2.UserLoginRequest.FromString,
                     response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
             ),
             'GetLatestValue': grpc.unary_unary_rpc_method_handler(
@@ -247,7 +247,7 @@ class UserService(object):
             request,
             target,
             '/usermanagement.UserService/LoginUser',
-            usermanagement__pb2.UserIdentifier.SerializeToString,
+            usermanagement__pb2.UserLoginRequest.SerializeToString,
             usermanagement__pb2.UserResponse.FromString,
             options,
             channel_credentials,

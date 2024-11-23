@@ -3,15 +3,19 @@ import usermanagement_pb2
 import usermanagement_pb2_grpc
 import uuid
 
+
+
 max_attempts = 10
 
 email = ''
+
 
 
 def register_user(stub):
     # Crea una richiesta per la registrazione utente (modifica i dettagli come desiderato)
     global email
     email = input("Inserisci la tua email: ")
+    password = input("Inserisci la tua password: ") 
     ticker = input("Inserisci il ticker del tuo investimento: ")
 
 
@@ -21,7 +25,7 @@ def register_user(stub):
     ]
     print(f"Metadati che verranno passati al server: {metadata}")
 
-    request = usermanagement_pb2.UserRegisterRequest(email=email, ticker=ticker)
+    request = usermanagement_pb2.UserRegisterRequest(email=email, password = password, ticker=ticker) # decode() per convertire da byte a stringa
 
     # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):
@@ -50,6 +54,7 @@ def register_user(stub):
 def login_user(stub):
     global email
     email = input("Inserisci la tua email: ")
+    password = input("Inserisci la tua password: ") 
 
     metadata = [
         ('user_id', email),
@@ -58,7 +63,7 @@ def login_user(stub):
 
     print(f"Metadati che verranno passati al server: {metadata}")
 
-    request = usermanagement_pb2.UserIdentifier(email=email)
+    request = usermanagement_pb2.UserLoginRequest(email=email, password = password)
 
     # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):
