@@ -132,7 +132,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         result = handle_request_cache(request_id, user_id)
         if result:
             # test per il timeout
-            time.sleep(1)
+            #time.sleep(1)
             return result 
         else:
             try:
@@ -163,7 +163,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 save_into_cache(request_id, user_id, response)
             
         # test per il timeout
-        time.sleep(4)
+        #time.sleep(4)
         return response
     
 
@@ -174,7 +174,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         result = handle_request_cache(request_id, user_id)
         if result:
             # test per il timeout
-            time.sleep(1)
+            #time.sleep(1)
             return result 
         else:
             try:
@@ -202,7 +202,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 save_into_cache(request_id, user_id, response)
             
         # test per il timeout
-        time.sleep(4)
+        #time.sleep(4)
         return response
 
 

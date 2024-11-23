@@ -97,6 +97,10 @@ def data_collector():
             print("data_collector: Connessione al database riuscita")
 
             while True:
+                # Aggiungiamo un ritardo di 3 secondi tra ogni ciclo
+                time.sleep(3)
+
+                
                 try:
                     # Otteniamo i ticker dalla tabella Users
                     tickers = fetch_ticker_from_db(conn)
@@ -143,8 +147,7 @@ def data_collector():
                         # Confermiamo tutte le modifiche nel database
                         conn.commit()
 
-                    # Aggiungiamo un ritardo di 5 secondi tra ogni ciclo
-                    time.sleep(5)
+                    
 
                 except Exception as e:
                     print(f"data_collector: Errore {e}")
