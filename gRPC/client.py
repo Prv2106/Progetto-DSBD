@@ -42,7 +42,8 @@ def register_user(stub):
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
                 print(f"Errore: {err}")
                 break  # Esce dal ciclo poiché l'errore non è recuperabile
-    
+
+    email = ''
     print("Non è stato possibile completare la richiesta")
 
 
@@ -79,6 +80,7 @@ def login_user(stub):
                 print(f"Errore: {err}")
                 break  # Esce dal ciclo poiché l'errore non è recuperabile
     
+    email = ''
     print("Non è stato possibile completare la richiesta")
 
 
@@ -170,10 +172,10 @@ def get_last_value(stub):
         try:
             # qui ci interfacciamo con il server (invochiamo la funzione apposita)
             response = stub.GetLatestValue(request, timeout = 2 , metadata = metadata)
-            if isinstance(response, usermanagement_pb2.UserResponse):
-                print(f"\nEsito: {response.success}, Messaggio: {response.message}")
-            else: # qui abbiamo la risposta StockValueResponse
+            if response.success:
                 print(f"\nTicker: {response.ticker}, Valore: {response.value}, Timestamp: {response.timestamp}")
+            else: 
+                print(f"\n{response.message}")
             return
         
         except grpc.RpcError as err:
@@ -209,10 +211,10 @@ def calculate_average(stub):
         try:
             # qui ci interfacciamo con il server (invochiamo la funzione apposita)
             response = stub.GetAverageValue(request, timeout = 2 , metadata = metadata)
-            if isinstance(response, usermanagement_pb2.UserResponse):
-                print(f"\nEsito: {response.success}, Messaggio: {response.message}")
-            else:
+            if response.success:
                 print(f"\nTicker: {response.ticker}, Valore: {response.average}")
+            else: 
+                print(f"\n{response.message}")
             return
         
         except grpc.RpcError as err:

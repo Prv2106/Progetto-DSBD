@@ -65,6 +65,10 @@ average_values_query = """
     GROUP BY ticker;
 """
 
+count_ticker_query = """
+    SELECT COUNT(*) FROM Data WHERE ticker = %s
+"""
+
 
 
 def extract_metadata(context):
@@ -302,12 +306,12 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 with conn.cursor() as cursor:
                     cursor.execute(last_value_query, (request.email))
                     result = cursor.fetchone()
-                    logger.info(f"\nresult: {result}")
-                    timestamp, ticker, value = result
-        
-                    logger.info(f"\timestamp: {timestamp}, ticker: {ticker}, value: {value}")
-
-                response = usermanagement_pb2.StockValueResponse(success = True, message = "Valore recuperato", timestamp = str(timestamp), ticker = ticker, value = float(value))
+                    if result is None:
+                        response = usermanagement_pb2.StockValueResponse(success = False, message = "Nessun valore disponibile per il ticker registrato")
+                    else: 
+                        timestamp, ticker, value = result
+                        logger.info(f"\timestamp: {timestamp}, ticker: {ticker}, value: {value}")
+                        response = usermanagement_pb2.StockValueResponse(success = True, message = "Valore recuperato", timestamp = str(timestamp), ticker = ticker, value = float(value))
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
@@ -344,11 +348,12 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 with conn.cursor() as cursor:
                     cursor.execute(average_values_query, (request.email, request.num_values))
                     result = cursor.fetchone()
-                    ticker, average = result
-
-                    logger.info(f"\ticker: {ticker}, average: {average}")
-
-                response = usermanagement_pb2.AverageResponse(success=True, message="Media recuperata con successo", ticker = ticker, average = float(average))
+                    if result is None:
+                        response = usermanagement_pb2.StockValueResponse(success = False, message = "Nessun valore disponibile per il ticker registrato")
+                    else: 
+                        ticker, average = result
+                        logger.info(f"\ticker: {ticker}, average: {average}")
+                        response = usermanagement_pb2.AverageResponse(success=True, message="Media recuperata con successo", ticker = ticker, average = float(average))
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
