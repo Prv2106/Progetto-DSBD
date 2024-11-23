@@ -82,7 +82,7 @@ def login_user(stub):
                 continue  # Prova un altro tentativo
             
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
-                print(f"Errore: {err}")
+                print(f"Errore: Server non disponibile")
                 break  # Esce dal ciclo poiché l'errore non è recuperabile
     
     email = ''

@@ -15,8 +15,3 @@ CREATE TABLE IF NOT EXISTS Data (
 );
 
 
-INSERT INTO Users (email, pwd, ticker) VALUES
-('alberto@example.com', '$2b$12$KjM6u9zUJG/examplehash1', 'AAPL'),
-('giuseppe@example.com', '$2b$12$hBd3ERkZ2J/examplehash2', 'GOOG'),
-('maria@example.com', '$2b$12$Tj9dsfL8OJ/examplehash3', 'MSFT'),
-('luigi@example.com', '$2b$12$Ygdfj76TLN/examplehash4', 'AMZN');
