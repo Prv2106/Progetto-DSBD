@@ -217,7 +217,9 @@ def calculate_average(stub):
             # qui ci interfacciamo con il server (invochiamo la funzione apposita)
             response = stub.GetAverageValue(request, timeout = 2 , metadata = metadata)
             if response.success:
+                print(f"\n {response.message}")
                 print(f"\nTicker: {response.ticker}, Valore: {response.average}")
+
             else: 
                 print(f"\n{response.message}")
             return
