@@ -2,10 +2,13 @@ from datetime import datetime
 import time
 import threading
 import pytz
+import logging
 
 tz = pytz.timezone('Europe/Rome') 
 
-
+# Configurazione del logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 
@@ -38,14 +41,14 @@ class CircuitBreaker:
     # Metodo che si occupa di eseguire la richiesta in base allo stato del circuito
     def call(self,func,*args):
 
-        print(f"circuit_breaker: stato corrente del circuito -> {self.state}")
+        logger.info(f"circuit_breaker: stato corrente del circuito -> {self.state}")
 
         if self.state == "OPEN":
             time_since_failure = time.time() - self.last_failure_time
             if time_since_failure >= self.r_timeout:
                 self.state = "HALF_OPEN"
                 self.f_count = 0
-                print("circuit_breaker: Recovery Timeout superato, nuovo stato -> HALF_OPEN")
+                logger.info("circuit_breaker: Recovery Timeout superato, nuovo stato -> HALF_OPEN")
             else:
                 # Il circuito è ancora aperto
                 raise CircuitBreakerOpenException("circuit_breaker: Il circuito è aperto... Chiamata rifiutata.")
@@ -67,9 +70,9 @@ class CircuitBreaker:
         except self.e_exception as e: # se la richiesta fallisce
             self.last_failure_time = time.time()
             self.f_count = self.f_count + 1
-            print(f"circuit_breaker: Errore nella richiesta al servizio, failure_count -> {self.f_count}")
+            logger.error(f"circuit_breaker: Errore nella richiesta al servizio, failure_count -> {self.f_count}")
             if self.f_count >= self.f_threshold:
-                print("circuit_breaker: Soglia di failure superata, nuovo stato -> OPEN")
+                logger.info("circuit_breaker: Soglia di failure superata, nuovo stato -> OPEN")
                 self.state = "OPEN"
             raise e # rilancia al chiamante l'eccezione generata
                 
@@ -79,11 +82,11 @@ class CircuitBreaker:
             if self.state == "HALF_OPEN":
                 self.s_count += 1
                 if self.s_count >= self.s_threshold:
-                    print(f"circuit_breaker: Richieste eseguite con successo pari a {self.s_count}, nuovo stato -> CLOSED")
+                    logger.info(f"circuit_breaker: Richieste eseguite con successo pari a {self.s_count}, nuovo stato -> CLOSED")
                     self.state = "CLOSED"
                     self.s_count = 0
 
-            print(f"circuit_breaker: richiesta eseguita con successo ({datetime.now(tz)})")
+            logger.info(f"circuit_breaker: richiesta eseguita con successo ({datetime.now(tz)})")
             return result
        
 

@@ -70,6 +70,15 @@ count_ticker_query = """
 """
 
 
+def validate_email(email):
+    email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    return re.match(email_regex, email) is not None
+
+
+# TODO: aggiungere la validazione dell'email e la criptazione della password
+
+
+
 
 def extract_metadata(context):
     metadata = dict(context.invocation_metadata())
@@ -77,7 +86,7 @@ def extract_metadata(context):
     user_id = metadata.get('user_id', "unknown")
     request_id = metadata.get('request_id', "unknown")
 
-    logger.info(f"\nMetadati ricevuti: UserId -> {user_id}, RequestID -> {request_id}")
+    logger.info(f"Metadati ricevuti: UserId -> {user_id}, RequestID -> {request_id}")
     
     return user_id, request_id
 
@@ -90,7 +99,7 @@ def handle_request_cache(request_id, user_id):
         # Verifichiamo se la richiesta era stata già processata
         if request_id in request_cache:
             if user_id in request_cache[request_id]:
-                logger.info(f"\nRichiesta già elaborata per l'utente {user_id}")
+                logger.info(f"Richiesta già elaborata per l'utente {user_id}")
 
                 # Test per il Timeout
                 # time.sleep(1)
@@ -115,10 +124,6 @@ def save_into_cache(request_id, user_id, response):
     logger.info("#########################################")
     logger.info(f"Contenuto della cache: {request_cache}")
 
-
-
-#################################################################################################
-
 # Implementazione del servizio UserService che estende UserServiceServicer generato da protoc
 class UserService(usermanagement_pb2_grpc.UserServiceServicer): 
 
@@ -137,7 +142,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         else:
             try:
                 # Logica di registrazione utente
-                logger.info(f"\nRegistrazione utente: {request.email}, Ticker: {request.ticker}")
+                logger.info(f"Registrazione utente: {request.email}, Ticker: {request.ticker}")
             
                 conn = pymysql.connect(**db_config)
                 with conn.cursor() as cursor:
@@ -148,11 +153,11 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
             except pymysql.MySQLError as err:
                 if err.args[0] == 1062:  # Codice per duplicate entry (violazione chiave univoca)
-                    logger.error(f"\nErrore di duplicazione: {err}")
+                    logger.error(f"Errore di duplicazione: {err}")
                     response = usermanagement_pb2.UserResponse(success=False, message="Errore: l'utente con questa email esiste già.")
 
                 else:
-                    logger.error(f"\nErrore durante l'inserimento nel database: {err}")
+                    logger.error(f"Errore durante l'inserimento nel database: {err}")
                     response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
 
             finally:
