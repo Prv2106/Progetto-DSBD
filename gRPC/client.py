@@ -2,16 +2,18 @@ import grpc
 import usermanagement_pb2
 import usermanagement_pb2_grpc
 import uuid
+import time
 
 
 
-max_attempts = 10
-
+max_attempts = 20
+max_retries = 20  # Numero massimo di tentativi di riconnessione
+retry_interval = 5  # Intervallo di attesa tra i tentativi di connessione
 email = ''
 
 
 
-def register_user(stub):
+def register_user(stub, channel):
     # Crea una richiesta per la registrazione utente (modifica i dettagli come desiderato)
     global email
 
@@ -44,8 +46,14 @@ def register_user(stub):
                 continue  # Prova un altro tentativo
             
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
+                print("Errore: server non disponibile")
+                wait_for_server(channel)
+                break
+            else:
                 print(f"Errore: {err}")
-                break  # Esce dal ciclo poiché l'errore non è recuperabile
+                break
+
+            
         except ValueError as e:
             print(f"Errore: {e}")
             break
@@ -54,7 +62,7 @@ def register_user(stub):
     print("Non è stato possibile completare la richiesta")
 
 
-def login_user(stub):
+def login_user(stub, channel):
     global email
     email = input("Inserisci la tua email: ")
     password = input("Inserisci la tua password: ") 
@@ -85,14 +93,20 @@ def login_user(stub):
                 continue  # Prova un altro tentativo
             
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
-                print(f"Errore: Server non disponibile")
-                break  # Esce dal ciclo poiché l'errore non è recuperabile
+                print("Errore: server non disponibile")
+                wait_for_server(channel)
+                break
+            else:
+                print(f"Errore: {err}")
+                break
+
+        
     
     email = ''
     print("Non è stato possibile completare la richiesta")
 
 
-def update_user(stub):
+def update_user(stub, channel):
     # questa funzione verrà chiamata solo dopo che l'utente si sarà loggato,
     # quindi, chiederemo all'utente esclusivamente il nuovo ticker che vorrà seguire
     ticker = input("Inserisci il nuovo ticker: ")
@@ -122,14 +136,20 @@ def update_user(stub):
                 continue  # Prova un altro tentativo
             
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
+                print("Errore: server non disponibile")
+                wait_for_server(channel)
+                break
+            else:
                 print(f"Errore: {err}")
-                break  # Esce dal ciclo poiché l'errore non è recuperabile
+                break
+
+        
     
     print("Non è stato possibile completare la richiesta")
 
 
 
-def delete_user(stub):
+def delete_user(stub, channel):
     # questa funzione verrà chiamata solo dopo che l'utente si sarà loggato...
 
     # metadati 
@@ -157,13 +177,19 @@ def delete_user(stub):
                 continue  # Prova un altro tentativo
             
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
+                print("Errore: server non disponibile")
+                wait_for_server(channel)
+                break
+            else:
                 print(f"Errore: {err}")
-                break  # Esce dal ciclo poiché l'errore non è recuperabile
+                break
+
+        
     
     print("Non è stato possibile completare la richiesta")
 
 
-def get_last_value(stub):
+def get_last_value(stub, channel):
     # anche questa funzione verrà chiamata solo dopo che l'utente si sarà loggato
 
     # metadati 
@@ -194,13 +220,19 @@ def get_last_value(stub):
                 continue  # Prova un altro tentativo
             
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
+                print("Errore: server non disponibile")
+                wait_for_server(channel)
+                break
+            else:
                 print(f"Errore: {err}")
-                break  # Esce dal ciclo poiché l'errore non è recuperabile
+                break
+
+        
     
     print("Non è stato possibile completare la richiesta")
 
 
-def calculate_average(stub):
+def calculate_average(stub, channel):
     # anche questa  verrà chiamata solo dopo che l'utente si sarà loggato..
 
     # metadati 
@@ -235,13 +267,20 @@ def calculate_average(stub):
                 continue  # Prova un altro tentativo
             
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
+                print("Errore: server non disponibile")
+                wait_for_server(channel)
+                break
+            else:
                 print(f"Errore: {err}")
-                break  # Esce dal ciclo poiché l'errore non è recuperabile
+                break
+
+        
     
     print("Non è stato possibile completare la richiesta")
 
 
 #############################################################################
+
 
 def initial_menu():
     print("\nMenu:")
@@ -259,12 +298,46 @@ def logged_menu():
 
 
 
+
+
+def wait_for_server(channel, retry_interval=5, max_retries=20):
+    """
+    Attende che il server gRPC sia disponibile, controllando periodicamente lo stato del canale.
+    :param channel: Il canale gRPC.
+    :param retry_interval: Intervallo (in secondi) tra i tentativi di riconnessione.
+    :param max_retries: Numero massimo di tentativi di riconnessione prima di terminare il programma.
+    """
+    retry_count = 0
+    print("Connessione al server...")
+    while retry_count < max_retries:
+        try:
+            # Prova a connettersi al server
+            grpc.channel_ready_future(channel).result(timeout=10)
+            print("Connesso al server!")
+            return  # Esce dal loop se la connessione è stabilita
+        except grpc.FutureTimeoutError:
+            retry_count += 1
+            print(f"Connessione al server fallita. Tentativo {retry_count}/{max_retries} di riconnessione...")
+            time.sleep(retry_interval)
+
+    # Se il limite di tentativi è raggiunto, termina il programma
+    print(f"Impossibile connettersi al server dopo {max_retries} tentativi. Si prega di riprovare più tardi.")
+    exit(1)  # Termina il programma
+
+
+
 def run():
     global email
     # Connessione al server gRPC in ascolto sulla porta 50051
     with grpc.insecure_channel('localhost:50051') as channel:
+
+        # Attende che il server sia disponibile
+        wait_for_server(channel)
+     
         # Crea uno stub per il servizio UserService
         stub = usermanagement_pb2_grpc.UserServiceStub(channel)
+
+
 
         while True:
             # Mostra il menu e ottieni la scelta dell'utente
@@ -275,9 +348,9 @@ def run():
                 # 0. Esci
                 choice = input("Scegli un'opzione: ")
                 if choice == "1":
-                    register_user(stub)
+                    register_user(stub,channel)
                 elif choice == "2":
-                    login_user(stub)
+                    login_user(stub,channel)
                 elif choice == "0":
                     print("Uscita...")
                     break
@@ -292,14 +365,14 @@ def run():
                 # 0. Logout
                 choice = input("Scegli un'opzione: ")
                 if choice == "1":
-                    update_user(stub)
+                    update_user(stub,channel)
                 elif choice == '2':
-                    if delete_user(stub):
+                    if delete_user(stub,channel):
                         email = ''
                 elif choice == "3":
-                    get_last_value(stub)
+                    get_last_value(stub,channel)
                 elif choice == '4':
-                    calculate_average(stub)
+                    calculate_average(stub,channel)
                 elif choice == "0":
                     email = ''
                 else:
