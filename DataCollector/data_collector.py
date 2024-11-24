@@ -42,10 +42,16 @@ delete_old_query = """
 
 """
 
+delete_unused_tickers_query = """
+    DELETE FROM Data
+    WHERE ticker = %s
+"""
+
+
 
 circuit_breaker = CircuitBreaker(f_threshold = 4, r_timeout= 30)
-maximum_occurrences = 10 # numero di entry nella tabella Data per ciascun ticker
-
+maximum_occurrences = 200 # numero max di entry nella tabella Data per ciascun ticker
+last_tickers = []
 
 
 
@@ -93,11 +99,18 @@ def fetch_ticker_from_db(conn):
 
 def data_collector():
     logger.info("data_collector: start...")
+    global last_tickers
+    request_count = 0 # Contatore per gestire la velocità delle richieste
 
     while True:
-        # Aggiungiamo un ritardo di 3 secondi tra ogni ciclo
-        time.sleep(3)
-
+        
+        logger.info(f">>>>>>>>>>>>>>>>>>>>>>>>> Ciclo {request_count + 1}:")
+        if request_count > 200:
+            time.sleep(10)
+        else:
+            time.sleep(2)
+        
+        request_count += 1
         try:
             logger.info("data_collector: Tentativo di connessione al database...")
             # Apriamo una nuova connessione ad ogni ciclo
@@ -110,9 +123,25 @@ def data_collector():
 
                 if not tickers:  # condizione di lista vuota
                     logger.info("data_collector: Nessun ticker trovato nella tabella Users")
+                    last_tickers.clear()
                     continue
 
-                # Operiamo all'interno di un cursore, che ci consente di interagire con il database
+                ############### Eliminazione dei ticker inutilizzati 
+                with conn.cursor() as cursor:
+                    for ticker in last_tickers:  # Confronta i ticker precedenti con quelli attuali
+                        if ticker not in tickers:  # Ticker obsoleti
+                            try:
+                                cursor.execute(delete_unused_tickers_query, (ticker,))
+                                logger.info(f"data_collector: Ticker '{ticker}' rimosso dal database.")
+                            except pymysql.MySQLError as e:
+                                logger.error(f"data_collector: Errore durante l'eliminazione del ticker '{ticker}': {e}")
+                                continue
+
+                    # Aggiorna last_tickers con la lista attuale
+                    last_tickers = tickers[:] # Operiamo all'interno di un cursore, che ci consente di interagire con il database
+
+                ############### Inserimento degli ultimi valori per i ticker
+
                 with conn.cursor() as cursor:
                     for ticker in tickers:
                         try:

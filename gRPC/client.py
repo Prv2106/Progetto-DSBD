@@ -48,7 +48,7 @@ def register_user(stub, channel):
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
                 print("Errore: server non disponibile")
                 wait_for_server(channel)
-                break
+                continue
             else:
                 print(f"Errore: {err}")
                 break
@@ -95,7 +95,7 @@ def login_user(stub, channel):
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
                 print("Errore: server non disponibile")
                 wait_for_server(channel)
-                break
+                continue
             else:
                 print(f"Errore: {err}")
                 break
@@ -138,7 +138,7 @@ def update_user(stub, channel):
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
                 print("Errore: server non disponibile")
                 wait_for_server(channel)
-                break
+                continue
             else:
                 print(f"Errore: {err}")
                 break
@@ -179,7 +179,7 @@ def delete_user(stub, channel):
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
                 print("Errore: server non disponibile")
                 wait_for_server(channel)
-                break
+                continue
             else:
                 print(f"Errore: {err}")
                 break
@@ -222,7 +222,7 @@ def get_last_value(stub, channel):
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
                 print("Errore: server non disponibile")
                 wait_for_server(channel)
-                break
+                continue
             else:
                 print(f"Errore: {err}")
                 break
@@ -269,7 +269,7 @@ def calculate_average(stub, channel):
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
                 print("Errore: server non disponibile")
                 wait_for_server(channel)
-                break
+                continue
             else:
                 print(f"Errore: {err}")
                 break
