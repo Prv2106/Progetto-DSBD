@@ -46,6 +46,9 @@ def register_user(stub):
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
                 print(f"Errore: {err}")
                 break  # Esce dal ciclo poiché l'errore non è recuperabile
+        except ValueError as e:
+            print(f"Errore: {e}")
+            break
 
     email = ''
     print("Non è stato possibile completare la richiesta")

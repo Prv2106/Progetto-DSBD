@@ -6,6 +6,10 @@ from threading import Lock
 import pymysql
 import logging
 import time
+import re
+import bcrypt
+
+
 
 # Configurazione del logger
 logging.basicConfig(level=logging.INFO)
@@ -29,7 +33,7 @@ register_user_query = """
 """
 
 login_user_query = """
-    SELECT email
+    SELECT *
     FROM Users
     WHERE email = %s;
 """
@@ -129,48 +133,63 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
     # Servizio per la registrazione degli utenti
     def RegisterUser(self, request, context):
-
-        
         logger.info("Funzione Register_users")
         user_id, request_id = extract_metadata(context)
 
         result = handle_request_cache(request_id, user_id)
         if result:
             # test per il timeout
-            #time.sleep(1)
+            # time.sleep(1)
             return result 
-        else:
-            try:
-                # Logica di registrazione utente
-                logger.info(f"Registrazione utente: {request.email}, Ticker: {request.ticker}")
-            
-                conn = pymysql.connect(**db_config)
-                with conn.cursor() as cursor:
-                    cursor.execute(register_user_query, (request.email, request.password, request.ticker))
-                    conn.commit()
 
-                response = usermanagement_pb2.UserResponse(success=True, message="Utente registrato con successo!")
+        conn = None  # Inizializziamo conn con None
+        try:
+            # Logica di registrazione utente
+            logger.info(f"Registrazione utente: {request.email}, Ticker: {request.ticker}")
 
-            except pymysql.MySQLError as err:
-                if err.args[0] == 1062:  # Codice per duplicate entry (violazione chiave univoca)
-                    logger.error(f"Errore di duplicazione: {err}")
-                    response = usermanagement_pb2.UserResponse(success=False, message="Errore: l'utente con questa email esiste già.")
+            # Validazione dei dati
+            if not validate_email(request.email):
+                logger.error("Email non valida")
+                raise ValueError("Email non valida")
 
-                else:
-                    logger.error(f"Errore durante l'inserimento nel database: {err}")
-                    response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
+            # Hash della password
+            hashed_password = bcrypt.hashpw(request.password.encode('utf-8'), bcrypt.gensalt())
+            hashed_password_str = hashed_password.decode('utf-8')  # Convertiamo l'hash in stringa per il database
 
-            finally:
-                # Chiudiamo la connessione al database
+            # Apertura della connessione al database
+            conn = pymysql.connect(**db_config)
+            with conn.cursor() as cursor:
+                cursor.execute(register_user_query, (request.email, hashed_password_str, request.ticker))
+                conn.commit()
+
+            # Creazione della risposta di successo
+            response = usermanagement_pb2.UserResponse(success=True, message="Utente registrato con successo!")
+
+        except pymysql.MySQLError as err:
+            # Gestione degli errori specifici del database
+            if err.args[0] == 1062:  # Codice per duplicate entry (violazione chiave univoca)
+                logger.error(f"Errore di duplicazione: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message="Errore: l'utente con questa email esiste già.")
+            else:
+                logger.error(f"Errore durante l'inserimento nel database: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
+
+        except ValueError as e:
+            # Gestione degli errori di validazione
+            logger.error("Email non valida")
+            response = usermanagement_pb2.UserResponse(success=False, message="Errore: email non valida")
+
+        finally:
+            # Chiudiamo la connessione al database
+            if conn:  # Verifichiamo che conn non sia None
                 conn.close()
-            
-                # Memorizzazione della risposta nella cache
-                save_into_cache(request_id, user_id, response)
-            
+                
+            # Memorizzazione della risposta nella cache
+            save_into_cache(request_id, user_id, response)
+                
         # test per il timeout
-        #time.sleep(4)
+        # time.sleep(4)
         return response
-    
 
     def LoginUser(self, request, context):
         logger.info("Funzione login_user")
@@ -188,16 +207,32 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             
                 conn = pymysql.connect(**db_config)
                 with conn.cursor() as cursor:
-                    cursor.execute(login_user_query, (request.email))
+                    cursor.execute(login_user_query, (request.email,))
                     result = cursor.fetchone()
+                    
                     if result is None:
-                        response = usermanagement_pb2.UserResponse(success=False, message="Utente non registrato")
+                        response = usermanagement_pb2.UserResponse(success=False, message="Email o password non corrette")
                     else:
-                        response = usermanagement_pb2.UserResponse(success=True, message="Login effettuato!")
+                        _, _, hashed_password_db, _ = result
+                        
+                        logger.info(f"Valore hash dal database: {hashed_password_db}")
+                        
+                        # Assicurati che hashed_password_db sia in formato str e converti in bytes
+                        if isinstance(hashed_password_db, str):
+                            hashed_password_db = hashed_password_db.encode('utf-8')
 
+                        # Confronta la password
+                        if bcrypt.checkpw(request.password.encode('utf-8'), hashed_password_db):
+                            response = usermanagement_pb2.UserResponse(success=True, message="Login effettuato con successo")
+                        else:
+                            response = usermanagement_pb2.UserResponse(success=False, message="Email o password non corrette")
+
+            except ValueError as e:
+                logger.error(f"Errore bcrypt: {e}")
+                response = usermanagement_pb2.UserResponse(success=False, message="Errore durante il controllo della password")
             except pymysql.MySQLError as err:
-                logger.error(f"\nErrore durante l'inserimento nel database: {err}")
-                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
+                logger.error(f"Errore nel database, codice di errore: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database, codice di errore: {err}")
 
             finally:
                 # Chiudiamo la connessione al database
