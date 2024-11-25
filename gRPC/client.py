@@ -289,7 +289,8 @@ def initial_menu():
     print("0. Esci")
 
 def logged_menu():
-    print("\nMenu:")
+    print(f"\nAccount: {email}")
+    print("Menu:")
     print("1. Aggiorna ticker seguito")
     print("2. Cancellami")
     print("3. Recupero Ultimo Valore Disponibile")
@@ -308,7 +309,7 @@ def wait_for_server(channel, retry_interval=5, max_retries=20):
     :param max_retries: Numero massimo di tentativi di riconnessione prima di terminare il programma.
     """
     retry_count = 0
-    print("Connessione al server...")
+    print("\nConnessione al server...")
     while retry_count < max_retries:
         try:
             # Prova a connettersi al server

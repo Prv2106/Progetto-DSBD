@@ -143,6 +143,15 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             # Logica di registrazione utente
             logger.info(f"Registrazione utente: {request.email}, Ticker: {request.ticker}")
 
+            if not request.password:
+                logger.error("password non inserita")
+                raise ValueError("password non inserita")
+            
+            if not request.ticker:
+                logger.error("ticker non inserito")
+                raise ValueError("ticker non inserito")
+        
+
             # Validazione dei dati
             if not validate_email(request.email):
                 logger.error("Email non valida")
@@ -172,8 +181,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         except ValueError as e:
             # Gestione degli errori di validazione
-            logger.error("Email non valida")
-            response = usermanagement_pb2.UserResponse(success=False, message="Errore: email non valida")
+            response = usermanagement_pb2.UserResponse(success=False, message= str(e))
 
         finally:
             # Chiudiamo la connessione al database

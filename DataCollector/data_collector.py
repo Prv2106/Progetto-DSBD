@@ -57,24 +57,37 @@ last_tickers = []
 
 
 def fetch_yfinance_data(ticker):
-    stock = yf.Ticker(ticker)
+    try:    
+        stock = yf.Ticker(ticker)
 
-    # Otteniamo i dati storici dell'oggetto ticker per 1 giorno
-    data = stock.history(period="1d")
+        # Otteniamo i dati storici dell'oggetto ticker per 1 giorno
+        data = stock.history(period="1d")
+        
+        if data.empty: 
+            return 0 
+        """
+        Viene estratto il valore del prezzo di chiusura (Close) del primo (e unico) giorno nel DataFrame data. 
+        La funzione .iloc[0] restituisce il primo valore nella colonna "Close", che è il prezzo di chiusura per il giorno richiesto.
+        """
+        
+        closing_price_usd = data['Close'].iloc[0]
+            
+        # Cambio USD-EUR
+        usd_to_eur_rate = 0.9
+        closing_price_eur = closing_price_usd * usd_to_eur_rate
+            
+        return closing_price_eur
+        
+    except ValueError as ve:
+        # Gestiamo errori specifici relativi ai dati
+        print(f"Errore nei dati del ticker {ticker}: {ve}")
+        raise
     
-    if data.empty:
-        raise ValueError(f"Non sono stati trovati valori per il ticker: {ticker}")
-    
-    """
-    Viene estratto il valore del prezzo di chiusura (Close) del primo (e unico) giorno nel DataFrame data. 
-    La funzione .iloc[0] restituisce il primo valore nella colonna "Close", che è il prezzo di chiusura per il giorno richiesto.
-    """
-    closing_price_usd = data['Close'].iloc[0]
+    except Exception as e:
+        # Gestione di errori generici (es. problemi di rete, API non raggiungibile)
+        print(f"Errore critico durante l'elaborazione del ticker {ticker}: {e}")
+        raise Exception(f"Errore, codice di errore: {e}") 
 
-    # cambio USD-EUR 
-    usd_to_eur_rate = 0.9  
-    closing_price_eur = closing_price_usd * usd_to_eur_rate
-    return closing_price_eur
 
 def fetch_ticker_from_db(conn):
     # Usa la connessione passata come parametro

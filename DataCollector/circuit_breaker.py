@@ -34,7 +34,7 @@ class CircuitBreaker:
         self.s_count = 0 # contatore dei successi
         self.s_threshold = 3 # soglia di richieste eseguite con successo, oltre la quale il cirxuito viene chiusoù
         
-        self.test_mode = True # Flag da abilitare per testare il passaggio da stato OPEN ad HALF_OPEN e da HALF_OPEN a CLOSED in modo forzato
+        self.test_mode = False # Flag da abilitare per testare il passaggio da stato OPEN ad HALF_OPEN e da HALF_OPEN a CLOSED in modo forzato
         self.t_threshold = 3 # numero di volte in cui effettuare il test
         self.t_count = 0 # contatore per il test
 
@@ -65,7 +65,7 @@ class CircuitBreaker:
             else:
                  # tentativo di esecuzione della richiesta
                 result = func(*args)
-            
+                    
 
         except self.e_exception as e: # se la richiesta fallisce
             self.last_failure_time = time.time()
