@@ -118,8 +118,8 @@ def data_collector():
     while True:
         
         logger.info(f">>>>>>>>>>>>>>>>>>>>>>>>> Ciclo {request_count + 1}:")
-        if request_count > 200:
-            time.sleep(10)
+        if request_count > 300:
+            time.sleep(3600) # aggiorna ogni ora
         else:
             time.sleep(2)
         

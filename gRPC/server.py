@@ -123,6 +123,36 @@ def save_into_cache(request_id, user_id, response):
     
     
     
+# Funzione di test che inserisce degli utenti per inizializzare il database
+def populate_db():
+    pwd = "1234"
+    hashed_pwd = bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt())
+    hashed_pwd_str = hashed_pwd.decode('utf-8')  # Convertiamo l'hash in stringa per il database
+    success = False
+    while not success:
+        try:
+                # Apertura della connessione al database
+                conn = pymysql.connect(**db_config)
+                with conn.cursor() as cursor:
+                        cursor.execute(register_user_query, ("utente1@example.com", hashed_pwd_str, "AAPL"))
+                        cursor.execute(register_user_query, ("utente2@example.com", hashed_pwd_str, "AMZN"))
+                        cursor.execute(register_user_query, ("utente3@example.com", hashed_pwd_str, "GOOG"))
+                        conn.commit()
+                        success = True
+        except pymysql.MySQLError as err:
+            if err.args[0] == 1062: # Gli utenti sono stati già inseriti
+                success = True # Perché significa che il server è stato riavviato e il database è stato già inizializzato
+         
+        finally:
+            # Chiudi la connessione
+            try:
+                conn.close()
+            except:
+                pass
+            
+
+    
+    
 
 # Implementazione del servizio UserService che estende UserServiceServicer generato da protoc
 class UserService(usermanagement_pb2_grpc.UserServiceServicer): 
@@ -426,8 +456,19 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         return response
 
 
+
+def initialize():
+    try:
+        populate_db()
+        logger.info("Database inizializzato correttamente.")
+    except Exception as e:
+        logger.error(f"Errore durante l'inizializzazione del database: {e}")
+        raise  # Interrompi l'avvio del server in caso di errori gravi
+
 def serve():
     try:
+        # Inizializzazione del database
+        initialize()
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         usermanagement_pb2_grpc.add_UserServiceServicer_to_server(UserService(), server)
 

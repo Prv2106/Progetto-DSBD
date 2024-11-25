@@ -8,6 +8,8 @@ RUN pip install pymysql
 
 RUN pip install bcrypt pymysql
 
+RUN pip install cryptography
+
 
 
 
