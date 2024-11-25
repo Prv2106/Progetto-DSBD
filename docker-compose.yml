@@ -20,7 +20,7 @@ services:
       - db
     networks:
       - net2
-    container_name: data_collector
+    container_name: break_collector_container
     restart: always
     
   server-grpc:
@@ -31,7 +31,7 @@ services:
       - db
     networks:
       - net1
-    container_name: server
+    container_name: grpc_server_container
     ports:
       - "50051:50051"
     restart: always
