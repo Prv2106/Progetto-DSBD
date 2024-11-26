@@ -49,7 +49,7 @@ delete_unused_tickers_query = """
 
 
 
-circuit_breaker = CircuitBreaker(f_threshold = 4, r_timeout= 30)
+circuit_breaker = CircuitBreaker(f_threshold = 3, r_timeout= 30)
 maximum_occurrences = 200 # numero max di entry nella tabella Data per ciascun ticker
 last_tickers = []
 

@@ -108,20 +108,31 @@ def handle_request_cache(request_id, user_id):
     # Nessuna risposta trovata nella cache
     return None
 
+
 def save_into_cache(request_id, user_id, response):
     """
-    Memorizza una risposta nella cache in modo sicuro utilizzando un lock.
+    Memorizza una risposta nella cache globale. Se la dimensione totale della cache supera il limite,
+    rimuove gli elementi più vecchi.
     """
+    max_cache_size = 300  # Limite globale della cache
+
     with cache_lock:
-        # Verifica e aggiornamento della cache
+        # Aggiungiamo la nuova risposta nella cache
         if request_id not in request_cache:
             request_cache[request_id] = {}
+
         request_cache[request_id][user_id] = response
 
+        # Controlliamo la dimensione totale della cache
+        if len(request_cache) > max_cache_size:
+            # Rimuoviamo il primo elemento inserito (FIFO - First In, First Out)
+            oldest_request_id = next(iter(request_cache))
+            del request_cache[oldest_request_id]
+
     # Log dello stato della cache
+    logger.info(f"Cache aggiornata. Dimensione attuale: {len(request_cache)}")
     logger.info(f"Contenuto della cache:\n {request_cache}")
-    
-    
+
     
 # Funzione di test che inserisce degli utenti per inizializzare il database
 def populate_db():

@@ -15,8 +15,9 @@ logger = logging.getLogger(__name__)
 def unreliable_service():
     # metodo per testare il circuit breaker
     if random.random() > 0.3:
-        logger.info("circuit_breaker: metodo unreliable_service()")
+        logger.info("circuit_breaker: esecuzione metodo unreliable_service()")
         raise Exception("circuit_breaker: Test di errore")
+    
 
 
 class CircuitBreaker:
@@ -35,12 +36,11 @@ class CircuitBreaker:
         self.s_threshold = 3            # soglia di richieste eseguite con successo, oltre la quale il cirxuito viene chiusoù
         
         self.test_mode = True           # Flag da abilitare per testare il passaggio da stato OPEN ad HALF_OPEN e da HALF_OPEN a CLOSED in modo forzato
-        self.t_threshold = 20            # numero di volte in cui effettuare il test
+        self.t_threshold = 20           # numero di volte in cui effettuare il test
         self.t_count = 0                # contatore per il test
 
     # Metodo che si occupa di eseguire la richiesta in base allo stato del circuito
     def call(self,func,*args):
-        result = None
         logger.info(f"circuit_breaker: stato corrente del circuito -> {self.state}")
 
         if self.state == "OPEN":
@@ -61,6 +61,7 @@ class CircuitBreaker:
             if  (self.state == "CLOSED" or self.state == "HALF_OPEN") and self.test_mode and self.t_count <= self.t_threshold:
                 self.t_count += 1
                 unreliable_service()
+                result = func(*args) # se il servizio inaffidabile non solleva eccezioni viene eseguita la richiesta
             ################# TEST #########################
             else:
                 # tentativo di esecuzione della richiesta
@@ -79,6 +80,7 @@ class CircuitBreaker:
             elif self.state == "HALF_OPEN":
                 logger.info(f"circuit_breaker: Richiesta fallita nello stato {self.state}, nuovo stato -> OPEN")
                 self.s_count = 0
+                self.last_failure_time = time.time()
                 self.state = "OPEN"
             raise e # rilancia al chiamante l'eccezione generata
                 
