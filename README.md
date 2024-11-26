@@ -1,5 +1,4 @@
-# Progetto DSBD
-## Descrizione Applicazione
+# Descrizione Applicazione
 
 Il progetto implementa un'architettura per la gestione di utenti e di dati finanziari mediante:
 - Un **server gRPC**
