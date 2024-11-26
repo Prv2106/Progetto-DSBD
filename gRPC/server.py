@@ -260,6 +260,10 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 logger.info(f"Login utente: {request.email}")
             
                 conn = pymysql.connect(**db_config)
+                
+                # LOGICA DI LOGIN: dapprima verifichiamo che l'email inserita dall'utente sia presente...
+                # se l'email è presente allora la password recuperata dal db viene confrontata con quella inviata dall'utente
+
                 with conn.cursor() as cursor:
                     cursor.execute(login_user_query, (request.email,))
                     result = cursor.fetchone()
@@ -297,7 +301,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         return response
 
 
-    # Servizio per l'aggiornamento del ticker seguito da un utente
+    # Funzione per l'aggiornamento del ticker seguito da un utente
     def UpdateUser(self, request, context):
         logger.info("Funzione richiesta: UpdateUser")
         user_id, request_id = extract_metadata(context)
@@ -320,8 +324,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 response = usermanagement_pb2.UserResponse(success=True, message="Ticker aggiornato con successo!")
 
             except pymysql.MySQLError as err:
-                logger.error(f"Errore durante l'inserimento nel database: {err}")
-                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
+                logger.error(f"Errore nel database, codice di errore: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database, codice di errore: {err}")
 
             finally:
                 # Chiudiamo la connessione al database
@@ -336,7 +340,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
 
 
-    # eliminazione dell'utente loggato
+    # Funzione di eliminazione dell'utente loggato
     def DeleteUser(self, request, context):
         logger.info("Funzione richiesta: DeleteUser")
         user_id, request_id = extract_metadata(context)
@@ -359,13 +363,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
-                logger.error(f"Errore durante l'eliminazione dell'utente, codice di errore: {err}")
-                response = usermanagement_pb2.UserResponse(success=False, message="Errore durante l'eliminazione dell'utente. Riprovare più tardi.")
-            
-            except Exception as e:
-                # Log per errori generici
-                logger.error(f"Errore inatteso durante l'eliminazione dell'utente, codice di errore: {e}")
-                response = usermanagement_pb2.UserResponse(success=False, message="Si è verificato un errore imprevisto.")
+                logger.error(f"Errore nel database, codice di errore: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database, codice di errore: {err}")
 
             finally:
                 # Chiudiamo la connessione al database
@@ -379,7 +378,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         return response
     
 
-    # recupero dell'ultimo valore
+    # Funzione di recupero dell'ultimo valore
     def GetLatestValue(self, request, context):
         logger.info("Funzione GetLatestValue")
         user_id, request_id = extract_metadata(context)
@@ -391,7 +390,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             return result 
         else:
             try:
-                logger.info(f"\nRecupero ultimo valore del ticker seguito dall'utente: {request.email}")
+                logger.info(f"Recupero ultimo valore del ticker seguito dall'utente: {request.email}")
             
                 conn = pymysql.connect(**db_config)
                 with conn.cursor() as cursor:
@@ -401,13 +400,13 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                         response = usermanagement_pb2.StockValueResponse(success = False, message = "Nessun valore disponibile per il ticker registrato")
                     else: 
                         timestamp, ticker, value = result
-                        logger.info(f"\timestamp: {timestamp}, ticker: {ticker}, value: {value}")
+                        logger.info(f"timestamp: {timestamp}, ticker: {ticker}, value: {value}")
                         response = usermanagement_pb2.StockValueResponse(success = True, message = "Valore recuperato", timestamp = str(timestamp), ticker = ticker, value = float(value))
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
-                logger.error(f"Errore durante il recupero dell'informazione dal database: {err}")
-                response = usermanagement_pb2.StockValueResponse(success=False, message="Errore durante il recupero dell'informazione dal database. Riprovare più tardi.")
+                logger.error(f"Errore nel database, codice di errore: {err}")
+                response = usermanagement_pb2.StockValueResponse(success=False, message=f"Errore database, codice di errore: {err}")
 
             finally:
                 # Chiudiamo la connessione al database
@@ -456,14 +455,9 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
-                logger.error(f"Errore durante il recupero dell'informazione dal database, codice di errore: {err}")
-                response = usermanagement_pb2.AverageResponse(success=False, message="Errore durante il recupero dell'informazione dal database. Riprovare più tardi.")
+                logger.error(f"Errore nel database, codice di errore: {err}")
+                response = usermanagement_pb2.AverageResponse(success=False, message=f"Errore database, codice di errore: {err}")
             
-            except Exception as e:
-                # Log per errori generici
-                logger.error(f"Errore inatteso, codice di errore: {e}")
-                response = usermanagement_pb2.AverageResponse(success=False, message="Si è verificato un errore imprevisto.")
-
             finally:
                 # Chiudiamo la connessione al database
                 conn.close()
@@ -483,7 +477,7 @@ def initialize():
         logger.info("Database inizializzato correttamente.")
     except Exception as e:
         logger.error(f"Errore durante l'inizializzazione del database: {e}")
-        raise  # Interrompi l'avvio del server in caso di errori gravi
+        raise  # Interrompe l'avvio del server in caso di errori gravi
 
 def serve():
     try:
