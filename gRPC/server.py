@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 request_cache = {}  # dizionario di dizionari per consentire il controllo non soltanto sulla richiesta ma anche sull'utente
-cache_lock = Lock()
+cache_lock = Lock() # per gestire l'aggiornamento della cache in modo consistente (pool di thread)
 
 # Configurazione per il database
 db_config = {
@@ -78,7 +78,11 @@ def validate_email(email):
     email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
     return re.match(email_regex, email) is not None
 
+
 def extract_metadata(context):
+    """
+    Funzione che estrae i metadati passati lato client.
+    """
     metadata = dict(context.invocation_metadata())
 
     user_id = metadata.get('user_id', "unknown")
@@ -99,9 +103,6 @@ def handle_request_cache(request_id, user_id):
             if user_id in request_cache[request_id]:
                 logger.info(f"Richiesta già elaborata per l'utente {user_id}")
 
-                # Test per il Timeout
-                # time.sleep(1)
-
                 # Ritorniamo la risposta già processata
                 return request_cache[request_id][user_id]
     
@@ -111,10 +112,10 @@ def handle_request_cache(request_id, user_id):
 
 def save_into_cache(request_id, user_id, response):
     """
-    Memorizza una risposta nella cache globale. Se la dimensione totale della cache supera il limite,
+    Memorizza una risposta nella cache. Se la dimensione totale della cache supera il limite,
     rimuove gli elementi più vecchi.
     """
-    max_cache_size = 300  # Limite globale della cache
+    max_cache_size = 300  # Limite della cache
 
     with cache_lock:
         # Aggiungiamo la nuova risposta nella cache
@@ -134,22 +135,24 @@ def save_into_cache(request_id, user_id, response):
     logger.info(f"Contenuto della cache:\n {request_cache}")
 
     
-# Funzione di test che inserisce degli utenti per inizializzare il database
 def populate_db():
+    """
+    Funzione di test che inserisce degli utenti per inizializzare il database.
+    """
     pwd = "1234"
-    hashed_pwd = bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt())
+    hashed_pwd = bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()) # il salt serve per evitare che 2 pass uguali abbiano lo stesso hash
     hashed_pwd_str = hashed_pwd.decode('utf-8')  # Convertiamo l'hash in stringa per il database
     success = False
     while not success:
         try:
-                # Apertura della connessione al database
-                conn = pymysql.connect(**db_config)
-                with conn.cursor() as cursor:
-                        cursor.execute(register_user_query, ("utente1@example.com", hashed_pwd_str, "AAPL"))
-                        cursor.execute(register_user_query, ("utente2@example.com", hashed_pwd_str, "AMZN"))
-                        cursor.execute(register_user_query, ("utente3@example.com", hashed_pwd_str, "GOOG"))
-                        conn.commit()
-                        success = True
+            # Apertura della connessione al database
+            conn = pymysql.connect(**db_config)
+            with conn.cursor() as cursor:
+                    cursor.execute(register_user_query, ("utente1@example.com", hashed_pwd_str, "AAPL"))
+                    cursor.execute(register_user_query, ("utente2@example.com", hashed_pwd_str, "AMZN"))
+                    cursor.execute(register_user_query, ("utente3@example.com", hashed_pwd_str, "GOOG"))
+                    conn.commit()
+                    success = True
         except pymysql.MySQLError as err:
             if err.args[0] == 1062: # Gli utenti sono stati già inseriti
                 success = True # Perché significa che il server è stato riavviato e il database è stato già inizializzato
@@ -168,32 +171,35 @@ def populate_db():
 # Implementazione del servizio UserService che estende UserServiceServicer generato da protoc
 class UserService(usermanagement_pb2_grpc.UserServiceServicer): 
 
-    # Servizio per la registrazione degli utenti
+    # Funzione di registrazione degli utenti
     def RegisterUser(self, request, context):
         logger.info("Funzione richiesta: RegisterUser")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id)
-        if result:
+        result = handle_request_cache(request_id, user_id) # vediamo se tale richiesta era già ricevuta dal server (presente nella cache)
+        if result: # se c'è...
             # test per il timeout
             time.sleep(1)
-            return result 
+            return result # la restituiamo
 
+        # questa parte del codice a seguire viene eseguita solo se quella da processare è una nuova richiesta
         conn = None  # Inizializziamo conn con None
         try:
             # Logica di registrazione utente
             logger.info(f"Registrazione utente: {request.email}, Ticker: {request.ticker}")
 
+            # verifica che la password non sia vuota
             if not request.password:
                 logger.error("password non inserita")
                 raise ValueError("password non inserita")
             
+            # verifica che sia stato inserito un ticker
             if not request.ticker:
                 logger.error("ticker non inserito")
                 raise ValueError("ticker non inserito")
         
 
-            # Validazione dei dati
+            # Validazione dell'email
             if not validate_email(request.email):
                 logger.error("Email non valida")
                 raise ValueError("Email non valida")
@@ -213,11 +219,11 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         except pymysql.MySQLError as err:
             # Gestione degli errori specifici del database
-            if err.args[0] == 1062:  # Codice per duplicate entry (violazione chiave univoca)
-                logger.error(f"Errore di duplicazione: {err}")
+            if err.args[0] == 1062:  # Codice per duplicate entry (email già esistente)
+                logger.error(f"Errore di duplicazione, codice di errore: {err}")
                 response = usermanagement_pb2.UserResponse(success=False, message="Errore: l'utente con questa email esiste già.")
             else:
-                logger.error(f"Errore durante l'inserimento nel database: {err}")
+                logger.error(f"Errore durante l'inserimento nel database, codice di errore: {err}")
                 response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database: {err}")
 
         except ValueError as e:
@@ -236,16 +242,19 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         time.sleep(4)
         return response
 
+
+    # Funzione per il login degli utenti
     def LoginUser(self, request, context):
         logger.info("Funzione richiesta: LoginUser")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id)
+        
+        result = handle_request_cache(request_id, user_id) # vediamo se tale richiesta era già ricevuta dal server (presente nella cache)
         if result:
             # test per il timeout
             #time.sleep(1)
             return result 
-        else:
+        else: # questa parte del codice a seguire viene eseguita solo se quella da processare è una nuova richiesta
             try:
                 # Logica di login utente
                 logger.info(f"Login utente: {request.email}")
