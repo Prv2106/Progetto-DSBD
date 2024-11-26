@@ -91,10 +91,12 @@ MICROSERVIZI E LORO INTERAZIONI:
     * Inserito nel container “mysql\_container”.  
     * Consiste in 2 tabelle:
 
-      * **Users**: 
+      * **Users**: ![IMG_3499](https://github.com/user-attachments/assets/fb4d4391-4140-4163-b2b9-6a36f53fb61f)
+
         * Da evidenziare che  il salvataggio della password nel database (in fase di registrazione) avviene, per questioni di sicurezza, attraverso l’hashing della stessa (eseguito lato server).
 
-      * **Data**: 
+      * **Data**: ![IMG_3498](https://github.com/user-attachments/assets/a1f11cde-c462-4476-8c50-79232df556ea)
+
         * Non è stata esplicitamente definita una relazione tra le tabelle perché il valore in uscita di un’azione è lo stesso indipendentemente dall’utente che lo possiede; quindi, avremmo avuto inutilmente repliche ridondanti.
 
   * **Interazioni:**  
