@@ -140,17 +140,15 @@ def populate_db():
     Funzione di test che inserisce degli utenti per inizializzare il database.
     """
     pwd = "1234"
-    hashed_pwd = bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()) # il salt serve per evitare che 2 pass uguali abbiano lo stesso hash
-    hashed_pwd_str = hashed_pwd.decode('utf-8')  # Convertiamo l'hash in stringa per il database
     success = False
     while not success:
         try:
             # Apertura della connessione al database
             conn = pymysql.connect(**db_config)
             with conn.cursor() as cursor:
-                    cursor.execute(register_user_query, ("utente1@example.com", hashed_pwd_str, "AAPL"))
-                    cursor.execute(register_user_query, ("utente2@example.com", hashed_pwd_str, "AMZN"))
-                    cursor.execute(register_user_query, ("utente3@example.com", hashed_pwd_str, "GOOG"))
+                    cursor.execute(register_user_query, ("utente1@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AAPL"))
+                    cursor.execute(register_user_query, ("utente2@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AMZN"))
+                    cursor.execute(register_user_query, ("utente3@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "GOOG"))
                     conn.commit()
                     success = True
         except pymysql.MySQLError as err:
