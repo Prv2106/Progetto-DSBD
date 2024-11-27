@@ -175,9 +175,9 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
     def RegisterUser(self, request, context):
         logger.info("Funzione richiesta: RegisterUser")
         user_id, request_id = extract_metadata(context)
-
+        
         result = handle_request_cache(request_id, user_id) # vediamo se tale richiesta era già ricevuta dal server (presente nella cache)
-        if result: # se c'è...
+        if result: 
             # test per il timeout
             time.sleep(1)
             return result # la restituiamo
