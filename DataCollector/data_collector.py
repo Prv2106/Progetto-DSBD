@@ -28,7 +28,7 @@ insert_query = """
     VALUES (%s, %s, %s);
 """
 
-# Query che per ogni ticker elimina quello più vecchio
+# Query dato un ticker elimina l'occorrenza più vecchia nella tabella
 delete_old_query = """
     DELETE FROM Data
     WHERE (ticker, timestamp) IN (
@@ -48,14 +48,13 @@ delete_unused_tickers_query = """
 """
 
 
-
+# creiamo un'istanza del Circuit Breaker
 circuit_breaker = CircuitBreaker(f_threshold = 3, r_timeout= 20)
 maximum_occurrences = 200 # numero max di entry nella tabella Data per ciascun ticker
-last_tickers = []
+last_tickers = [] # lista dei ticker recuperati all'iterazione precedente
 
 
-
-
+# Funzione per recuperare l'ultimo valore del ticker da Yahoo! Finance
 def fetch_yfinance_data(ticker):
     try:    
         stock = yf.Ticker(ticker)
@@ -63,13 +62,18 @@ def fetch_yfinance_data(ticker):
         # Otteniamo i dati storici dell'oggetto ticker per 1 giorno
         data = stock.history(period="1d")
         
+        """
+        dato che non abbiamo gestitola validazione del ticker passato dall'utente, abbiamo scelto di 
+        considerare una risposta vuota (dovuta ad esempio dall'inserimento di un ticker non valido) come un soft error, 
+        in modo da non causare l'apertura del circuito in questo tipo di situazione       
+        """
         if data.empty: 
             return 0 
+       
         """
         Viene estratto il valore del prezzo di chiusura (Close) del primo (e unico) giorno nel DataFrame data. 
         La funzione .iloc[0] restituisce il primo valore nella colonna "Close", che è il prezzo di chiusura per il giorno richiesto.
         """
-        
         closing_price_usd = data['Close'].iloc[0]
             
         # Cambio USD-EUR
@@ -77,23 +81,18 @@ def fetch_yfinance_data(ticker):
         closing_price_eur = closing_price_usd * usd_to_eur_rate
             
         return closing_price_eur
-        
-    except ValueError as ve:
-        # Gestiamo errori specifici relativi ai dati
-        print(f"Errore nei dati del ticker {ticker}: {ve}")
-        raise
-    
+            
     except Exception as e:
         # Gestione di errori generici (es. problemi di rete, API non raggiungibile)
         print(f"Errore critico durante l'elaborazione del ticker {ticker}: {e}")
         raise Exception(f"Errore, codice di errore: {e}") 
 
 
+# funzione che si occupa di recuperare la lista dei ticker dalla tabella Users del database
 def fetch_ticker_from_db(conn):
-    # Usa la connessione passata come parametro
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT DISTINCT ticker FROM Users;")            
+            cursor.execute("SELECT DISTINCT ticker FROM Users;") # usiamo la keyword DISTINCT per non passare più volte uno stesso ticker a yf           
             result = cursor.fetchall() 
 
             if not result:  # condizione di lista vuota
@@ -101,22 +100,21 @@ def fetch_ticker_from_db(conn):
 
             # otteniamo una lista a partire dalla lista di tuple
             # result è una lista di tuple per esempio: [('AAPL',), ('GOOG',), ('TSLA',)]
+
             tickers = [row[0] for row in result]
             return tickers
         
     except Exception as e:
-        logger.error(f"data_collector: Errore durante il recupero dei ticker, codice di errore: {e}")
+        logger.error(f"data_collector: Errore durante il recupero dei ticker dal db, codice di errore: {e}")
         return []
-
 
 
 def data_collector():
     logger.info("data_collector: start...")
     global last_tickers
-    request_count = 0 # Contatore per gestire la velocità delle richieste
+    request_count = 0 # contatore per gestire la velocità delle richieste
 
     while True:
-        
         logger.info(f">>>>>>>>>>>>>>>>>>>>>>>>> Ciclo {request_count + 1}:")
         if request_count > 300:
             time.sleep(3600) # aggiorna ogni ora
@@ -124,20 +122,21 @@ def data_collector():
             time.sleep(2)
         
         request_count += 1
+        
         try:
             logger.info("data_collector: Tentativo di connessione al database...")
             # Apriamo una nuova connessione ad ogni ciclo
-            with pymysql.connect(**db_config) as conn:  # Uso del context manager 'with' per gestire la connessione
+            with pymysql.connect(**db_config) as conn: 
                 logger.info("data_collector: Connessione al database riuscita")
 
                 # Otteniamo i ticker dalla tabella Users
                 tickers = fetch_ticker_from_db(conn)
                 logger.info(f"data_collector: Lista dei Ticker recuperati: {tickers}")
 
-                if not tickers:  # condizione di lista vuota
+                if not tickers:  # lista vuota
                     logger.info("data_collector: Nessun ticker trovato nella tabella Users")
                     last_tickers.clear()
-                    continue
+                    continue # riproviamo
 
                 ############### Eliminazione dei ticker inutilizzati 
                 with conn.cursor() as cursor:
@@ -151,10 +150,10 @@ def data_collector():
                                 continue
 
                     # Aggiorna last_tickers con la lista attuale
-                    last_tickers = tickers[:] # Operiamo all'interno di un cursore, che ci consente di interagire con il database
+                    last_tickers = tickers[:]
+
 
                 ############### Inserimento degli ultimi valori per i ticker
-
                 with conn.cursor() as cursor:
                     for ticker in tickers:
                         try:

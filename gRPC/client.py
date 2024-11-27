@@ -4,38 +4,44 @@ import usermanagement_pb2_grpc
 import uuid
 import time
 
-
-
-max_attempts = 20
+max_attempts = 20 # numero massimo di tentativi di ritrasmissione
 max_retries = 20  # Numero massimo di tentativi di riconnessione
 retry_interval = 5  # Intervallo di attesa tra i tentativi di connessione
-email = ''
 
+"""
+    la variabile (globale) serve per gestire lo stato di utente loggato... 
+    In particolare, se è una stringa vuota il menù del client sarà quello per un utente non loggato;
+    diversamente, l'utente è loggato e quindi mostreremo il menù con cui può interagire.
+"""
+email = '' 
 
 
 def register_user(stub, channel):
-    # Crea una richiesta per la registrazione utente (modifica i dettagli come desiderato)
     global email
 
+    # di seguito si chiede all'utente di inserire i dati necessari alla registrazione
     email = input("Inserisci la tua email: ")
     password = input("Inserisci la tua password: ") 
     ticker = input("Inserisci il ticker del tuo investimento: ")
 
     metadata = [
         ('user_id', email),
-        ('request_id', str(uuid.uuid4())) 
+        ('request_id', str(uuid.uuid4())) # generiamo uno uuid4 per garantire l'unicità della richiesta.
     ]
+
     print(f"Metadati che verranno passati al server: {metadata}")
 
-    request = usermanagement_pb2.UserRegisterRequest(email=email, password=password, ticker=ticker) # decode() per convertire da byte a stringa
+    # andiamo a "inizializzare" il messaggio di richiesta del file .proto
+    request = usermanagement_pb2.UserRegisterRequest(email=email, password=password, ticker=ticker)
 
     # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):
         try:
-            response = stub.RegisterUser(request, timeout = 2 ,metadata = metadata)
+             # qui ci interfacciamo con il server (invochiamo la funzione apposita)
+            response = stub.RegisterUser(request, timeout = 2, metadata = metadata)
             print(f"\nEsito: {response.success}, Messaggio: {response.message}")
             if response.success is False:
-                email = ''
+                email = '' # settiamo la variabile globale 'email' a stringa vuota perchè non è avvenuta effettivamente la registrazione (e il conseguente login)
             return
         
         except grpc.RpcError as err:
@@ -45,20 +51,23 @@ def register_user(stub, channel):
                 print("############################################################")
                 continue  # Prova un altro tentativo
             
-            elif err.code() == grpc.StatusCode.UNAVAILABLE:
+            # se, durante la richiesta, la connessione col server viene persa, viene ritentata 
+            # la connessione e, in caso di successo, la richiesta viene ripetuta.
+            elif err.code() == grpc.StatusCode.UNAVAILABLE: 
                 print("Errore: server non disponibile")
                 wait_for_server(channel)
                 continue
-            else:
+            else: # nel caso di altri tipi di errori, la richiesta al server fallisce in maniera non recuperabile.
                 print(f"Errore: {err}")
                 break
 
-            
-        except ValueError as e:
+        except ValueError as e: # errori del tipo: email non valida, password vuota o ticker vuoto.
             print(f"Errore: {e}")
             break
 
-    email = ''
+    # questa parte di codice viene eseguita nel caso in cui non è possibile eseguire la richiesta
+    # cioè, errore irrecuperabile o tentativi superati.
+    email = '' 
     print("Non è stato possibile completare la richiesta")
 
 
@@ -76,7 +85,6 @@ def login_user(stub, channel):
 
     request = usermanagement_pb2.UserLoginRequest(email=email, password = password)
 
-    # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):
         try:
             response = stub.LoginUser(request, timeout = 2 ,metadata = metadata)
@@ -100,30 +108,26 @@ def login_user(stub, channel):
                 print(f"Errore: {err}")
                 break
 
-        
-    
     email = ''
     print("Non è stato possibile completare la richiesta")
 
 
 def update_user(stub, channel):
-    # questa funzione verrà chiamata solo dopo che l'utente si sarà loggato,
+    # questa funzione può essere chiamata solo dopo che l'utente si sarà loggato,
     # quindi, chiederemo all'utente esclusivamente il nuovo ticker che vorrà seguire
     ticker = input("Inserisci il nuovo ticker: ")
 
-    # i metadati saranno uguali alla registrazione, ma l'email è quella inizializzata
+    # i metadati hanno la stessa struttura di quelli della registrazione e login, 
+    # con la differenza che qui l'email è quella già inizializzata (in fase di login o registrazione).
     metadata = [
         ('user_id', email),
         ('request_id', str(uuid.uuid4())) 
     ]
 
-    # andiamo a "inizializzare" il messaggio di richiesta del file .proto
     request = usermanagement_pb2.UserUpdateRequest(email=email, new_ticker=ticker)
 
-    # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):
         try:
-            # qui ci interfacciamo con il server (invochiamo la funzione apposita)
             response = stub.UpdateUser(request, timeout = 2 , metadata = metadata)
             print(f"\nEsito: {response.success}, Messaggio: {response.message}")
             return
@@ -133,7 +137,7 @@ def update_user(stub, channel):
                 print("\n############################################################")
                 print(f"Timeout superato, tentativo {attempt + 1} di {max_attempts}")
                 print("############################################################")
-                continue  # Prova un altro tentativo
+                continue  
             
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
                 print("Errore: server non disponibile")
@@ -143,73 +147,24 @@ def update_user(stub, channel):
                 print(f"Errore: {err}")
                 break
 
-        
-    
     print("Non è stato possibile completare la richiesta")
 
 
 
 def delete_user(stub, channel):
-    # questa funzione verrà chiamata solo dopo che l'utente si sarà loggato...
+    # questa funzione può essere chiamata solo dopo che l'utente si sarà loggato...
 
-    # metadati 
     metadata = [
         ('user_id', email),
         ('request_id', str(uuid.uuid4())) 
     ]
 
-    # andiamo a "inizializzare" il messaggio di richiesta del file .proto
     request = usermanagement_pb2.UserIdentifier(email=email)
 
-    # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):
         try:
-            # qui ci interfacciamo con il server (invochiamo la funzione apposita)
             response = stub.DeleteUser(request, timeout = 2 , metadata = metadata)
             print(f"\nEsito: {response.success}, Messaggio: {response.message}")
-            return response.success
-        
-        except grpc.RpcError as err:
-            if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED: # se è scaduto il timeout
-                print("\n############################################################")
-                print(f"Timeout superato, tentativo {attempt + 1} di {max_attempts}")
-                print("############################################################")
-                continue  # Prova un altro tentativo
-            
-            elif err.code() == grpc.StatusCode.UNAVAILABLE:
-                print("Errore: server non disponibile")
-                wait_for_server(channel)
-                continue
-            else:
-                print(f"Errore: {err}")
-                break
-
-        
-    
-    print("Non è stato possibile completare la richiesta")
-
-
-def get_last_value(stub, channel):
-    # anche questa funzione verrà chiamata solo dopo che l'utente si sarà loggato
-
-    # metadati 
-    metadata = [
-        ('user_id', email),
-        ('request_id', str(uuid.uuid4())) 
-    ]
-
-    # andiamo a "inizializzare" il messaggio di richiesta del file .proto
-    request = usermanagement_pb2.UserIdentifier(email = email)
-
-    # Meccanismo di "timeout & retry"
-    for attempt in range(max_attempts):
-        try:
-            # qui ci interfacciamo con il server (invochiamo la funzione apposita)
-            response = stub.GetLatestValue(request, timeout = 2 , metadata = metadata)
-            if response.success:
-                print(f"\nTicker: {response.ticker}, Valore: {response.value}, Timestamp: {response.timestamp}")
-            else: 
-                print(f"\n{response.message}")
             return
         
         except grpc.RpcError as err:
@@ -227,13 +182,48 @@ def get_last_value(stub, channel):
                 print(f"Errore: {err}")
                 break
 
+    print("Non è stato possibile completare la richiesta")
+
+
+def get_last_value(stub, channel):
+    # anche questa funzione verrà chiamata solo dopo che l'utente si sarà loggato
+
+    metadata = [
+        ('user_id', email),
+        ('request_id', str(uuid.uuid4())) 
+    ]
+
+    request = usermanagement_pb2.UserIdentifier(email = email)
+
+    for attempt in range(max_attempts):
+        try:
+            response = stub.GetLatestValue(request, timeout = 2 , metadata = metadata)
+            if response.success:
+                print(f"\nTicker: {response.ticker}, Valore: {response.value}, Timestamp: {response.timestamp}")
+            else: 
+                print(f"\n{response.message}")
+            return
         
-    
+        except grpc.RpcError as err:
+            if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                print("\n############################################################")
+                print(f"Timeout superato, tentativo {attempt + 1} di {max_attempts}")
+                print("############################################################")
+                continue 
+            
+            elif err.code() == grpc.StatusCode.UNAVAILABLE:
+                print("Errore: server non disponibile")
+                wait_for_server(channel)
+                continue
+            else:
+                print(f"Errore: {err}")
+                break
+
     print("Non è stato possibile completare la richiesta")
 
 
 def calculate_average(stub, channel):
-    # anche questa  verrà chiamata solo dopo che l'utente si sarà loggato..
+    # anche questa può essere chiamata solo dopo che l'utente si sarà loggato..
 
     # metadati 
     metadata = [
@@ -243,28 +233,24 @@ def calculate_average(stub, channel):
 
     num_values = input("Inserisci il numero di valori di cui vuoi venga calcolata la media: ")
 
-    # andiamo a "inizializzare" il messaggio di richiesta del file .proto
     request = usermanagement_pb2.AverageRequest(email=email, num_values=int(num_values))
 
-    # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):
         try:
-            # qui ci interfacciamo con il server (invochiamo la funzione apposita)
             response = stub.GetAverageValue(request, timeout = 2 , metadata = metadata)
             if response.success:
-                print(f"\n {response.message}")
+                print(f"\n{response.message}")
                 print(f"\nTicker: {response.ticker}, Valore: {response.average}")
-
             else: 
                 print(f"\n{response.message}")
             return
         
         except grpc.RpcError as err:
-            if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED: # se è scaduto il timeout
+            if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
                 print("\n############################################################")
                 print(f"Timeout superato, tentativo {attempt + 1} di {max_attempts}")
                 print("############################################################")
-                continue  # Prova un altro tentativo
+                continue
             
             elif err.code() == grpc.StatusCode.UNAVAILABLE:
                 print("Errore: server non disponibile")
@@ -274,13 +260,11 @@ def calculate_average(stub, channel):
                 print(f"Errore: {err}")
                 break
 
-        
-    
     print("Non è stato possibile completare la richiesta")
 
 
-#############################################################################
 
+#############################################################################
 
 def initial_menu():
     print("\nMenu:")
@@ -292,21 +276,20 @@ def logged_menu():
     print(f"\nAccount: {email}")
     print("Menu:")
     print("1. Aggiorna ticker seguito")
-    print("2. Cancellami")
-    print("3. Recupero Ultimo Valore Disponibile")
-    print("4. Calcolo della Media degli Ultimi Valori")
+    print("2. Cancella account")
+    print("3. Recupero ultimo valore disponibile della mia azione")
+    print("4. Calcolo della media degli ultimi valori")
     print("0. Logout")
-
-
-
 
 
 def wait_for_server(channel, retry_interval=5, max_retries=20):
     """
     Attende che il server gRPC sia disponibile, controllando periodicamente lo stato del canale.
-    :param channel: Il canale gRPC.
-    :param retry_interval: Intervallo (in secondi) tra i tentativi di riconnessione.
-    :param max_retries: Numero massimo di tentativi di riconnessione prima di terminare il programma.
+
+    Spiegazione dei parametri:
+    - channel: Il canale gRPC.
+    - retry_interval: Intervallo (in secondi) tra i tentativi di riconnessione.
+    - max_retries: Numero massimo di tentativi di riconnessione prima di terminare il programma.
     """
     retry_count = 0
     print("\nConnessione al server...")
@@ -326,7 +309,6 @@ def wait_for_server(channel, retry_interval=5, max_retries=20):
     exit(1)  # Termina il programma
 
 
-
 def run():
     global email
     # Connessione al server gRPC in ascolto sulla porta 50051
@@ -338,15 +320,10 @@ def run():
         # Crea uno stub per il servizio UserService
         stub = usermanagement_pb2_grpc.UserServiceStub(channel)
 
-
-
         while True:
-            # Mostra il menu e ottieni la scelta dell'utente
+            # Mostra il menu e ottiene la scelta dell'utente
             if len(email) == 0:
                 initial_menu()
-                # 1. Registrazione Utente
-                # 2. Login Utente
-                # 0. Esci
                 choice = input("Scegli un'opzione: ")
                 if choice == "1":
                     register_user(stub,channel)
@@ -359,11 +336,6 @@ def run():
                     print("Opzione non valida, riprova.")
             else:
                 logged_menu()
-                # 1. Aggiorna ticker seguito
-                # 2. Cancellami
-                # 3. Recupero ultimo valore disponibile
-                # 4. Calcolo della Media degli Ultimi Valori
-                # 0. Logout
                 choice = input("Scegli un'opzione: ")
                 if choice == "1":
                     update_user(stub,channel)

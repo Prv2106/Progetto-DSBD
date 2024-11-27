@@ -1,4 +1,3 @@
-#Usa un'immagine MySQL ufficiale come base
 FROM mysql
 
 
@@ -11,5 +10,3 @@ ENV MYSQL_PASSWORD=progetto
 COPY init.sql /docker-entrypoint-initdb.d/
 
 VOLUME /var/lib/mysql
-
-

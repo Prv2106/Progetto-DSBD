@@ -2,14 +2,11 @@ FROM python:3.9
 
 WORKDIR /app
 
-# Installazione delle librerie necessarie
-COPY requirements.txt requirements.txt
+COPY requirements.txt .
 
 RUN pip install -r requirements.txt
 
-# Copia del codice del DataCollector
 COPY data_collector.py .
 COPY circuit_breaker.py .
 
-# Comando per eseguire il DataCollector
 CMD ["python", "data_collector.py"]

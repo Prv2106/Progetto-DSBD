@@ -26,7 +26,7 @@ db_config = {
     "database": "DSBD_progetto"
 }
 
-# QUERIES
+# QUERIEs
 register_user_query = """
     INSERT INTO Users (email, pwd, ticker)
     VALUES (%s, %s, %s);
