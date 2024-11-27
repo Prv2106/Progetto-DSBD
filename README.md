@@ -17,7 +17,7 @@ Il Circuit Breaker, quindi, previene sovraccarichi o richieste ripetute al servi
 **SCELTE PROGETTUALI**
 
 SCHEMA ARCHITETTURALE:
-![IMG_3497](https://github.com/user-attachments/assets/7a572240-4ee0-4381-b217-aa119d556673)
+![IMG_3500](https://github.com/user-attachments/assets/3d36baaa-04d7-4cd8-b6e6-010b48f5a890)
 
 Per la realizzazione di questa applicazione distribuita ci siamo limitati a implementare solamente 2 microservizi (uno per server gRPC, ed un altro per Data Collector \+ Circuit Breaker) per diverse ragioni. Innanzitutto, dato che il server gRPC è relativamente semplice, abbiamo ritenuto che una sua ulteriore scomposizione in microservizi non avrebbe portato ad un miglioramento significativo, anzi, avrebbe aumentato la complessità (gestione di più container, endpoint, configurazioni, e bilanciamento del carico).
 
@@ -47,6 +47,7 @@ MICROSERVIZI E LORO INTERAZIONI:
       * *GetLatestValue*: permette all’utente di recuperare l’ultimo valore aggiornato relativo alla propria azione.  
       * *GetAverageValue*: permette all’utente di indicare il numero di valori relativi alla propria azione sui quali deve essergli restituita la media, nel caso in cui il numero inserito è maggiore delle occorrenze nel db relative a quel ticker viene restituita la media sul massimo numero di occorrenze possibili.
 
+![IMG_3501](https://github.com/user-attachments/assets/b6ee9df8-e681-4a66-b79f-db1f93ba9e0e)
 
 * **Client gRPC**
 
@@ -69,10 +70,7 @@ MICROSERVIZI E LORO INTERAZIONI:
 
   * **Interazioni:**  
     * col DB, per memorizzare o eliminare i dati recuperati da yf (mediante il Circuit Breaker)    
-
-**Schema che evidenzia il funzionamento principale del Data Collector**
-
-![IMG_3496](https://github.com/user-attachments/assets/26cbbe67-6d84-4a9a-b8e1-cdb4c3576fbe)
+![IMG_3502](https://github.com/user-attachments/assets/4e19ceb5-27f1-45ed-b130-23bb0be5fab1)
 
 
 * **Circuit Breaker** (integrato nel DataCollector)
