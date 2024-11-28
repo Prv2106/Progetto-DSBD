@@ -165,6 +165,7 @@ def delete_user(stub, channel):
         try:
             response = stub.DeleteUser(request, timeout = 2 , metadata = metadata)
             print(f"\nEsito: {response.success}, Messaggio: {response.message}")
+            email = ''
             return
         
         except grpc.RpcError as err:
