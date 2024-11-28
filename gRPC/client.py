@@ -153,7 +153,7 @@ def update_user(stub, channel):
 
 def delete_user(stub, channel):
     # questa funzione può essere chiamata solo dopo che l'utente si sarà loggato...
-
+    global email
     metadata = [
         ('user_id', email),
         ('request_id', str(uuid.uuid4())) 
@@ -341,8 +341,7 @@ def run():
                 if choice == "1":
                     update_user(stub,channel)
                 elif choice == '2':
-                    if delete_user(stub,channel):
-                        email = ''
+                    delete_user(stub,channel)
                 elif choice == "3":
                     get_last_value(stub,channel)
                 elif choice == '4':
