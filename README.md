@@ -111,7 +111,7 @@ Infine, il client gRPC di test comunica con il server mediante il canale realizz
 
   * **Interazioni:**  
     * con il server gRPC.  
-    * con il DataCollector.
+    * con il Data Collector.
    
 
 
