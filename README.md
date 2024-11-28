@@ -46,8 +46,9 @@ MICROSERVIZI E LORO INTERAZIONI:
       * *DeleteUser*: permette all’utente di cancellare il proprio account.  
       * *GetLatestValue*: permette all’utente di recuperare l’ultimo valore aggiornato relativo alla propria azione.  
       * *GetAverageValue*: permette all’utente di indicare il numero di valori relativi alla propria azione sui quali deve essergli restituita la media, nel caso in cui il numero inserito è maggiore delle occorrenze nel db relative a quel ticker viene restituita la media sul massimo numero di occorrenze possibili.
+![photo_2024-11-28_17-02-12](https://github.com/user-attachments/assets/0d7f3209-7253-4a6f-92a0-432432a1a07d)
 
-![IMG_3501](https://github.com/user-attachments/assets/b6ee9df8-e681-4a66-b79f-db1f93ba9e0e)
+
 
 * **Client gRPC**
 
