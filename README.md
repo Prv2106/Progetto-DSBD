@@ -33,7 +33,7 @@ I due microservizi  comunicano indirettamente attraverso il database (che si tro
 
 Infine, il client gRPC di test comunica con il server mediante il canale realizzato sulla porta 50051 grazie al port mapping.
 
-MICROSERVIZI E LORO INTERAZIONI:
+**MICROSERVIZI E LORO INTERAZIONI**:
 
 * **Server gRPC**
 
@@ -96,7 +96,8 @@ MICROSERVIZI E LORO INTERAZIONI:
     * Inserito nel container “mysql\_container”.  
     * Consiste in 2 tabelle:
 
-      * **Users**: ![IMG_3499](https://github.com/user-attachments/assets/fb4d4391-4140-4163-b2b9-6a36f53fb61f)
+      * **Users**: ![Immagine 2024-11-28 172550](https://github.com/user-attachments/assets/f7eedf1b-9bb2-48d4-a4ee-285101fdef28)
+
 
         * Da evidenziare che  il salvataggio della password nel database (in fase di registrazione) avviene, per questioni di sicurezza, attraverso l’hashing della stessa (eseguito lato server).
 
@@ -115,4 +116,5 @@ MICROSERVIZI E LORO INTERAZIONI:
 
 
 ## File Per il Build e il deploy
-[Build&Deploy&Setup_info.pdf](https://github.com/user-attachments/files/17947665/Build.Deploy.Setup_info.pdf)
+[Build&Deploy&Setup_info.pdf](https://github.com/user-attachments/files/17950628/Build.Deploy.Setup_info.pdf)
+
