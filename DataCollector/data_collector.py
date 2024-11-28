@@ -50,7 +50,7 @@ delete_unused_tickers_query = """
 
 # creiamo un'istanza del Circuit Breaker
 circuit_breaker = CircuitBreaker(f_threshold = 3, r_timeout= 20)
-maximum_occurrences = 500 # numero max di entry nella tabella Data per ciascun ticker
+maximum_occurrences = 200 # numero max di entry nella tabella Data per ciascun ticker
 last_tickers = [] # lista dei ticker recuperati all'iterazione precedente
 
 

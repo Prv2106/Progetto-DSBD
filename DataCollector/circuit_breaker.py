@@ -34,7 +34,7 @@ class CircuitBreaker:
         self.s_count = 0                # contatore dei successi
         self.s_threshold = 3            # soglia di richieste eseguite con successo, oltre la quale il circuito viene chiuso
         
-        self.test_mode = True           # flag da abilitare per testare il passaggio tra i vari stati in modo forzato
+        self.test_mode = False           # flag da abilitare per testare il passaggio tra i vari stati in modo forzato
         self.t_threshold = 8            # numero di volte in cui effettuare il test durante gli stati CLOSED e HALF_OPEN
         self.t_count = 0                # contatore per il test
 
