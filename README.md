@@ -107,4 +107,4 @@ MICROSERVIZI E LORO INTERAZIONI:
 
 
 ## File Per il Build e il deploy
-[Build&Deploy&Setup_info.pdf](https://github.com/user-attachments/files/17922266/Build.Deploy.Setup_info.pdf)
+[Build&Deploy&Setup_info 3.pdf](https://github.com/user-attachments/files/17947627/Build.Deploy.Setup_info.3.pdf)
