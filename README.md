@@ -101,7 +101,7 @@ Infine, il client gRPC di test comunica con il server mediante il canale realizz
 
         * Da evidenziare che  il salvataggio della password nel database (in fase di registrazione) avviene, per questioni di sicurezza, attraverso l’hashing della stessa (eseguito lato server).
 
-      * **Data**:![Immagine 2024-11-28 172550](https://github.com/user-attachments/assets/5ea56284-68dc-43cc-8003-49c2181c1708)
+      * **Data**:![Immagine 2024-11-28 215622](https://github.com/user-attachments/assets/c3c63aa0-8f37-4fc8-a9d8-66ad20c2ff54)
 
 
         * Non è stata esplicitamente definita una relazione tra le tabelle perché il valore in uscita di un’azione è lo stesso indipendentemente dall’utente che lo possiede; quindi, avremmo avuto inutilmente repliche ridondanti.
