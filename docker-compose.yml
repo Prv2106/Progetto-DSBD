@@ -23,8 +23,8 @@ services:
     
   server-grpc:
     build:
-      context: ./gRPC
-      dockerfile: dockerfile-server
+      context: .
+      dockerfile: gRPC/dockerfile-server
     depends_on:
       - db
     networks:
