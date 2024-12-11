@@ -1,0 +1,12 @@
+FROM python:3.9  
+
+WORKDIR /app
+
+# TODO: vedere che dipendenze servono e aggiungerle opportunamente
+RUN pip install pymysql
+
+RUN pip install bcrypt pymysql
+
+RUN pip install cryptography
+
+# CMD [ "python", "notifier.py"]
