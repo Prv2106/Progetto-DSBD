@@ -8,6 +8,10 @@ service UserService {
     rpc UpdateUser (UserUpdateRequest) returns (UserResponse);
     rpc DeleteUser (UserIdentifier) returns (UserResponse);
     rpc LoginUser (UserLoginRequest) returns (UserResponse);
+
+    // aggiornamento delle soglie
+    rpc UpdateHighThreshold (LowThresholdRequest) returns (UserResponse);
+    rpc UpdateLowThreshold (HighThresholdRequest) returns (UserResponse);
     
     // Metodi per il recupero dei dati
     rpc GetLatestValue (UserIdentifier) returns (StockValueResponse);
@@ -20,6 +24,8 @@ message UserRegisterRequest {
     string email = 1;
     string password = 2;
     string ticker = 3;
+    float low_value = 4;
+    float high_value = 5;
 }
 
 message UserUpdateRequest {
@@ -39,6 +45,16 @@ message UserIdentifier {
 message AverageRequest {
     string email = 1;
     int32 num_values = 2;
+}
+
+message LowThresholdRequest {
+    string email = 1;
+    float low_value = 2;
+}
+
+message HighThresholdRequest {
+    string email = 1;
+    float low_value = 2;
 }
 
 
