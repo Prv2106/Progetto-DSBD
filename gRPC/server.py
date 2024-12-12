@@ -6,9 +6,9 @@ from threading import Lock
 import pymysql
 import logging
 import time
-import re
 import bcrypt
 import users_command_service
+
 
 
 # Configurazione del logger
@@ -28,16 +28,6 @@ db_config = {
 
 
 # QUERIEs
-register_user_query = """
-    INSERT INTO Users (email, pwd, ticker)
-    VALUES (%s, %s, %s);
-"""
-
-login_user_query = """
-    SELECT *
-    FROM Users
-    WHERE email = %s;
-"""
 
 update_user_query = """
     UPDATE Users
@@ -73,11 +63,6 @@ average_values_query = """
 count_ticker_query = """
     SELECT COUNT(*) FROM Data WHERE ticker = (SELECT ticker FROM Users WHERE email = %s) 
 """
-
-
-def validate_email(email):
-    email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
-    return re.match(email_regex, email) is not None
 
 
 def extract_metadata(context):
@@ -146,12 +131,11 @@ def populate_db():
         try:
             # Apertura della connessione al database
             conn = pymysql.connect(**db_config)
-            with conn.cursor() as cursor:
-                    cursor.execute(register_user_query, ("utente1@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AAPL"))
-                    cursor.execute(register_user_query, ("utente2@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AMZN"))
-                    cursor.execute(register_user_query, ("utente3@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "GOOG"))
-                    conn.commit()
-                    success = True
+            command_users_service = users_command_service.CommandUsersService()
+            command_users_service.handle_register_users(users_command_service.RegisterUsersCommand("utente1@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AAPL",conn))
+            command_users_service.handle_register_users(users_command_service.RegisterUsersCommand("utente2@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AMZN",conn))
+            command_users_service.handle_register_users(users_command_service.RegisterUsersCommand("utente3@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "GOOG",conn))
+            success = True
         except pymysql.MySQLError as err:
             if err.args[0] == 1062: # Gli utenti sono stati già inseriti
                 success = True # Perché significa che il server è stato riavviato e il database è stato già inizializzato
@@ -194,7 +178,6 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             # Apertura della connessione al database
             conn = pymysql.connect(**db_config)
            
-            logger.info("Eseguo il comando di registrazione")
             command_users_service = users_command_service.CommandUsersService()
             command_users_service.handle_register_users(users_command_service.RegisterUsersCommand(request.email, hashed_password_str, request.ticker,conn))
 
@@ -249,23 +232,20 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 # LOGICA DI LOGIN: dapprima verifichiamo che l'email inserita dall'utente sia presente...
                 # se l'email è presente allora la password recuperata dal db viene confrontata con quella inviata dall'utente
 
-                with conn.cursor() as cursor:
-                    cursor.execute(login_user_query, (request.email,))
-                    result = cursor.fetchone()
-                    
-                    if result is None:
-                        response = usermanagement_pb2.UserResponse(success=False, message="Email o password non corrette")
-                    else:
-                        _, hashed_password_db, _, _, _ = result
-                        
-                        if isinstance(hashed_password_db, str):
+                query_users_service = users_query_service.QueryUsersService()
+                hashed_password_db = query_users_service.handle_get_user_password(users_query_service.GetUserPasswordQuery(request.email,conn))
+
+                if hashed_password_db is None:
+                    response = usermanagement_pb2.UserResponse(success=False, message="Email o password non corrette")
+                else:
+                    if isinstance(hashed_password_db, str):
                             hashed_password_db = hashed_password_db.encode('utf-8')
 
-                        # Confronto della password
-                        if bcrypt.checkpw(request.password.encode('utf-8'), hashed_password_db):
-                            response = usermanagement_pb2.UserResponse(success=True, message="Login effettuato con successo")
-                        else:
-                            response = usermanagement_pb2.UserResponse(success=False, message="Email o password non corrette")
+                    # Confronto della password
+                    if bcrypt.checkpw(request.password.encode('utf-8'), hashed_password_db):
+                        response = usermanagement_pb2.UserResponse(success=True, message="Login effettuato con successo")
+                    else:
+                        response = usermanagement_pb2.UserResponse(success=False, message="Email o password non corrette")
 
             except ValueError as e:
                 logger.error(f"Errore bcrypt, codice di errore: {e}")
