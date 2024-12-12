@@ -8,6 +8,7 @@ import logging
 import time
 import re
 import bcrypt
+import users_command_service
 
 
 
@@ -25,6 +26,7 @@ db_config = {
     "password": "progetto",
     "database": "DSBD_progetto"
 }
+
 
 # QUERIEs
 register_user_query = """
@@ -186,31 +188,17 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             # Logica di registrazione utente
             logger.info(f"Registrazione utente: {request.email}, Ticker: {request.ticker}")
 
-            # verifica che la password non sia vuota
-            if not request.password:
-                logger.error("password non inserita")
-                raise ValueError("password non inserita")
-            
-            # verifica che sia stato inserito un ticker
-            if not request.ticker:
-                logger.error("ticker non inserito")
-                raise ValueError("ticker non inserito")
-        
-
-            # Validazione dell'email
-            if not validate_email(request.email):
-                logger.error("Email non valida")
-                raise ValueError("Email non valida")
-
             # Hash della password
             hashed_password = bcrypt.hashpw(request.password.encode('utf-8'), bcrypt.gensalt())
             hashed_password_str = hashed_password.decode('utf-8')  # Convertiamo l'hash in stringa per il database
 
             # Apertura della connessione al database
             conn = pymysql.connect(**db_config)
-            with conn.cursor() as cursor:
-                cursor.execute(register_user_query, (request.email, hashed_password_str, request.ticker))
-                conn.commit()
+           
+            logger.info("Eseguo il comando di registrazione")
+            command_users_service = users_command_service.CommandUsersService()
+            command_users_service.handle_register_users(users_command_service.RegisterUsersCommand(request.email, hashed_password_str, request.ticker,conn))
+
 
             # Creazione della risposta di successo
             response = usermanagement_pb2.UserResponse(success=True, message="Utente registrato con successo!")
