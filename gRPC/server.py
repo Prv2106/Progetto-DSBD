@@ -11,7 +11,6 @@ import bcrypt
 import users_command_service
 
 
-
 # Configurazione del logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -257,7 +256,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                     if result is None:
                         response = usermanagement_pb2.UserResponse(success=False, message="Email o password non corrette")
                     else:
-                        _, _, hashed_password_db, _ = result
+                        _, hashed_password_db, _, _, _ = result
                         
                         if isinstance(hashed_password_db, str):
                             hashed_password_db = hashed_password_db.encode('utf-8')

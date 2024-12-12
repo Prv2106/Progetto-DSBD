@@ -63,7 +63,7 @@ def fetch_yfinance_data(ticker):
         data = stock.history(period="1d")
         
         """
-        dato che non abbiamo gestitola validazione del ticker passato dall'utente, abbiamo scelto di 
+        dato che non abbiamo gestito la validazione del ticker passato dall'utente, abbiamo scelto di 
         considerare una risposta vuota (dovuta ad esempio dall'inserimento di un ticker non valido) come un soft error, 
         in modo da non causare l'apertura del circuito in questo tipo di situazione       
         """

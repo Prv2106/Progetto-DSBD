@@ -23,8 +23,8 @@ def register_user(stub, channel):
     email = input("Inserisci la tua email: ")
     password = input("Inserisci la tua password: ") 
     ticker = input("Inserisci il ticker del tuo investimento: ")
-    low_value = 0
-    high_value = 0
+    low_value = -1
+    high_value = -1
 
     metadata = [
         ('user_id', email),

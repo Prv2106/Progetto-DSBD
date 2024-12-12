@@ -54,7 +54,7 @@ message LowThresholdRequest {
 
 message HighThresholdRequest {
     string email = 1;
-    float low_value = 2;
+    float high_value = 2;
 }
 
 
