@@ -1,4 +1,3 @@
-import pymysql
 import logging
 import re
 
@@ -17,6 +16,8 @@ db_config = {
 
 
 
+
+# Command per la registrazione dell'utente
 class RegisterUsersCommand:
     def __init__(self, email, hashed_pwd,ticker,conn):
         logger.info("Funzione COMMAND") 
@@ -46,9 +47,6 @@ class RegisterUsersCommand:
         self.ticker = ticker
         self.conn = conn
 
-
-
-
     @staticmethod
     def validate_email(email):
         email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
@@ -57,11 +55,27 @@ class RegisterUsersCommand:
 
 
 
+#TODO:
+# Command per l'aggiornamento del ticker
 
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
  
 
-
+# Servizio che gestisce gli users command
 class CommandUsersService:
     
     def handle_register_users(self, command: RegisterUsersCommand):
