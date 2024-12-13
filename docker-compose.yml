@@ -69,7 +69,7 @@ services:
   alert-system:
     build:
       context: .
-      dockerfile: dockerfile-alertsystem
+      dockerfile: AlertSystem/dockerfile-alertsystem
     depends_on:
       - kafka
       - db

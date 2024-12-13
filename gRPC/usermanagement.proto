@@ -24,8 +24,8 @@ message UserRegisterRequest {
     string email = 1;
     string password = 2;
     string ticker = 3;
-    float low_value = 4;
-    float high_value = 5;
+    int64 low_value = 4;
+    int64 high_value = 5;
 }
 
 message UserUpdateRequest {

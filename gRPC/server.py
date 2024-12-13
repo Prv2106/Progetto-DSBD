@@ -86,7 +86,7 @@ def populate_db():
     while not success:
         try:
             # Apertura della connessione al database
-            conn = pymysql.connect(**db_config)
+            conn = pymysql.connect(**db_config.db_config)
             service = command_service.CommandService()
             service.handle_register_user(command_service.RegisterUserCommand("utente1@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AAPL",conn))
             service.handle_register_user(command_service.RegisterUserCommand("utente2@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AMZN",conn))
@@ -132,7 +132,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             hashed_password_str = hashed_password.decode('utf-8')  # Convertiamo l'hash in stringa per il database
 
             # Apertura della connessione al database
-            conn = pymysql.connect(**db_config)
+            conn = pymysql.connect(**db_config.db_config)
            
             service = command_service.CommandService()
             service.handle_register_user(command_service.RegisterUserCommand(request.email, hashed_password_str, request.ticker,conn))
@@ -183,10 +183,11 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 # Logica di login utente
                 logger.info(f"Login utente: {request.email}")
             
-                conn = pymysql.connect(**db_config)
+                conn = pymysql.connect(**db_config.db_config)
                 
                 # LOGICA DI LOGIN: dapprima verifichiamo che l'email inserita dall'utente sia presente...
                 # se l'email è presente allora la password recuperata dal db viene confrontata con quella inviata dall'utente
+
                 service = query_service.QueryService()
                 hashed_password_db = service.handle_get_user_password(query_service.GetUserPasswordQuery(request.email,conn))
 
@@ -236,7 +237,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 # Logica di aggiornamento dell'azione associata a quell'utente
                 logger.info(f"Aggiornamento ticker utente: {request.email}, Ticker: {request.new_ticker}")
             
-                conn = pymysql.connect(**db_config)
+                conn = pymysql.connect(**db_config.db_config)
                 service = command_service.CommandService()
                 service.handle_update_user_ticker(command_service.UpdateUserTickerCommand(request.new_ticker, request.email,conn))
                 
@@ -273,7 +274,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             try:
                 logger.info(f"Eliminazione dell'utente: {request.email}")
             
-                conn = pymysql.connect(**db_config)
+                conn = pymysql.connect(**db_config.db_config)
                 
                 service = command_service.CommandService()
                 service.handle_delete_user(command_service.DeleteUserCommand(request.email,conn))
@@ -311,7 +312,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             try:
                 logger.info(f"Recupero ultimo valore del ticker seguito dall'utente: {request.email}")
             
-                conn = pymysql.connect(**db_config)
+                conn = pymysql.connect(**db_config.db_config)
                 
                 service = query_service.QueryService()
                 result = service.handle_get_last_ticker_value(query_service.GetLastTickerValueQuery(request.email,conn))
@@ -353,7 +354,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             try:
                 logger.info(f"Recupero media degli ultimi {request.num_values} valori del ticker seguito dall'utente: {request.email}")
             
-                conn = pymysql.connect(**db_config)
+                conn = pymysql.connect(**db_config.db_config)
                 
                 service = query_service.QueryService()
                 result = service.handle_get_average_ticker_value(query_service.GetAverageTickerValueQuery(request.email, request.num_values,conn))

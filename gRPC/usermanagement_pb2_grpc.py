@@ -54,6 +54,16 @@ class UserServiceStub(object):
                 request_serializer=usermanagement__pb2.UserLoginRequest.SerializeToString,
                 response_deserializer=usermanagement__pb2.UserResponse.FromString,
                 _registered_method=True)
+        self.UpdateHighThreshold = channel.unary_unary(
+                '/usermanagement.UserService/UpdateHighThreshold',
+                request_serializer=usermanagement__pb2.LowThresholdRequest.SerializeToString,
+                response_deserializer=usermanagement__pb2.UserResponse.FromString,
+                _registered_method=True)
+        self.UpdateLowThreshold = channel.unary_unary(
+                '/usermanagement.UserService/UpdateLowThreshold',
+                request_serializer=usermanagement__pb2.HighThresholdRequest.SerializeToString,
+                response_deserializer=usermanagement__pb2.UserResponse.FromString,
+                _registered_method=True)
         self.GetLatestValue = channel.unary_unary(
                 '/usermanagement.UserService/GetLatestValue',
                 request_serializer=usermanagement__pb2.UserIdentifier.SerializeToString,
@@ -94,6 +104,19 @@ class UserServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def UpdateHighThreshold(self, request, context):
+        """aggiornamento delle soglie
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateLowThreshold(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GetLatestValue(self, request, context):
         """Metodi per il recupero dei dati
         """
@@ -128,6 +151,16 @@ def add_UserServiceServicer_to_server(servicer, server):
             'LoginUser': grpc.unary_unary_rpc_method_handler(
                     servicer.LoginUser,
                     request_deserializer=usermanagement__pb2.UserLoginRequest.FromString,
+                    response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
+            ),
+            'UpdateHighThreshold': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateHighThreshold,
+                    request_deserializer=usermanagement__pb2.LowThresholdRequest.FromString,
+                    response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
+            ),
+            'UpdateLowThreshold': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateLowThreshold,
+                    request_deserializer=usermanagement__pb2.HighThresholdRequest.FromString,
                     response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
             ),
             'GetLatestValue': grpc.unary_unary_rpc_method_handler(
@@ -248,6 +281,60 @@ class UserService(object):
             target,
             '/usermanagement.UserService/LoginUser',
             usermanagement__pb2.UserLoginRequest.SerializeToString,
+            usermanagement__pb2.UserResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UpdateHighThreshold(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/usermanagement.UserService/UpdateHighThreshold',
+            usermanagement__pb2.LowThresholdRequest.SerializeToString,
+            usermanagement__pb2.UserResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UpdateLowThreshold(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/usermanagement.UserService/UpdateLowThreshold',
+            usermanagement__pb2.HighThresholdRequest.SerializeToString,
             usermanagement__pb2.UserResponse.FromString,
             options,
             channel_credentials,

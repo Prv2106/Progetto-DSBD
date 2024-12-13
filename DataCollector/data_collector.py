@@ -9,46 +9,12 @@ import query_service
 import command_service
 import db_config
 
-
 tz = pytz.timezone('Europe/Rome') 
 
 
 # Configurazione del logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-# QUERIEs
-insert_query = """
-    INSERT INTO Data (timestamp, ticker, valore_euro)
-    VALUES (%s, %s, %s);
-"""
-
-# Query dato un ticker elimina l'occorrenza più vecchia nella tabella
-delete_old_query = """
-    DELETE FROM Data
-    WHERE (ticker, timestamp) IN (
-    SELECT * FROM (
-        SELECT ticker, MIN(timestamp) AS oldest_timestamp
-        FROM Data
-        WHERE ticker = %s
-        GROUP BY ticker
-    ) AS subquery
-);
-
-"""
-
-delete_unused_tickers_query = """
-    DELETE FROM Data
-    WHERE ticker = %s
-"""
-# Configurazione per il database
-db_config = {
-    "host": "mysql_container",
-    "user": "alberto_giuseppe",
-    "password": "progetto",
-    "database": "DSBD_progetto"
-}
 
 
 # creiamo un'istanza del Circuit Breaker
@@ -66,7 +32,7 @@ def fetch_yfinance_data(ticker):
         data = stock.history(period="1d")
         
         """
-        dato che non abbiamo gestito la validazione del ticker passato dall'utente, abbiamo scelto di 
+        dato che non abbiamo gestitola validazione del ticker passato dall'utente, abbiamo scelto di 
         considerare una risposta vuota (dovuta ad esempio dall'inserimento di un ticker non valido) come un soft error, 
         in modo da non causare l'apertura del circuito in questo tipo di situazione       
         """
@@ -122,7 +88,7 @@ def data_collector():
         try:
             logger.info("data_collector: Tentativo di connessione al database...")
             # Apriamo una nuova connessione ad ogni ciclo
-            with pymysql.connect(**db_config) as conn: 
+            with pymysql.connect(**db_config.db_config) as conn: 
                 logger.info("data_collector: Connessione al database riuscita")
 
                 # Otteniamo i ticker dalla tabella Users
