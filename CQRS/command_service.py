@@ -1,5 +1,7 @@
+import pymysql
 import logging
 import re
+
 
 # Configurazione del logger
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +36,9 @@ class RegisterUserCommand:
         self.hashed_pwd = hashed_pwd
         self.ticker = ticker
         self.conn = conn
+
+
+
 
     @staticmethod
     def validate_email(email):

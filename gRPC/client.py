@@ -23,16 +23,40 @@ def register_user(stub, channel):
     email = input("Inserisci la tua email: ")
     password = input("Inserisci la tua password: ") 
     ticker = input("Inserisci il ticker del tuo investimento: ")
+    low_value = -1
+    high_value = -1
 
     metadata = [
         ('user_id', email),
         ('request_id', str(uuid.uuid4())) # generiamo uno uuid4 per garantire l'unicità della richiesta.
     ]
 
+    print("****PARAMETRI OPZIONALI****")
+
+    while True:
+        condition = input("Vuoi inserire una soglia minima? [s/n]: ")
+        if condition == "s" or condition == "S":
+            low_value = int(input("inserisci valore soglia minima: "))
+            break
+        elif condition == "n" or condition == "N": 
+            break
+        print("digitare s o n")
+
+    while True:
+        condition = input("Vuoi inserire una soglia massima? [s/n]: ")
+        if condition == "s" or condition == "S":
+            high_value = int(input("inserisci valore soglia massima: "))
+            break
+        elif condition == "n" or condition == "N": 
+            break
+        print("digitare s o n")
+
+
+
     print(f"Metadati che verranno passati al server: {metadata}")
 
     # andiamo a "inizializzare" il messaggio di richiesta del file .proto
-    request = usermanagement_pb2.UserRegisterRequest(email=email, password=password, ticker=ticker)
+    request = usermanagement_pb2.UserRegisterRequest(email=email, password=password, ticker=ticker, low_value = low_value, high_value = high_value)
 
     # Meccanismo di "timeout & retry"
     for attempt in range(max_attempts):

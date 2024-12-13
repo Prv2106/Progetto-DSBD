@@ -10,5 +10,6 @@ COPY DataCollector/data_collector.py .
 COPY DataCollector/circuit_breaker.py .
 COPY CQRS/command_service.py .
 COPY CQRS/query_service.py .
+COPY DB/db_config.py .
 
 CMD ["python", "data_collector.py"]

@@ -9,7 +9,7 @@ import time
 import bcrypt
 import command_service
 import query_service
-
+import db_config
 
 
 
@@ -19,16 +19,6 @@ logger = logging.getLogger(__name__)
 
 request_cache = {}  # dizionario di dizionari per consentire il controllo non soltanto sulla richiesta ma anche sull'utente
 cache_lock = Lock() # per gestire l'aggiornamento della cache in modo consistente (pool di thread)
-
-# Configurazione per il database
-db_config = {
-    "host": "mysql_container",
-    "user": "alberto_giuseppe",
-    "password": "progetto",
-    "database": "DSBD_progetto"
-}
-
-
 
 
 def extract_metadata(context):
@@ -197,7 +187,6 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 
                 # LOGICA DI LOGIN: dapprima verifichiamo che l'email inserita dall'utente sia presente...
                 # se l'email è presente allora la password recuperata dal db viene confrontata con quella inviata dall'utente
-
                 service = query_service.QueryService()
                 hashed_password_db = service.handle_get_user_password(query_service.GetUserPasswordQuery(request.email,conn))
 
