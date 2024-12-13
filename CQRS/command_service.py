@@ -29,15 +29,15 @@ class RegisterUserCommand:
             raise ValueError("Email non valida")
         
         self.register_user_command = """
-        INSERT INTO Users (email, pwd, ticker)
-        VALUES (%s, %s, %s);
+        INSERT INTO Users (email, pwd, ticker, low_value, high_value)
+        VALUES (%s, %s, %s, %s, %s);
         """
         self.email = email
         self.hashed_pwd = hashed_pwd
         self.ticker = ticker
-        self.conn = conn
         self.low_value = low_value
         self.high_value = high_value
+        self.conn = conn
 
 
 

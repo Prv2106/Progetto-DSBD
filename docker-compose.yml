@@ -100,7 +100,6 @@ services:
       - "587:587" 
     environment:
       - MAILNAME=yahoo-finance.com  # Nome del dominio del server
-    restart: always
     depends_on:
       - alert-notifier-system
     networks:

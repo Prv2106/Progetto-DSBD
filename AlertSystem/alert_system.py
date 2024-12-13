@@ -98,13 +98,13 @@ def scan_database_and_notify():
         with conn.cursor() as cursor:
             # Query per trovare profili che superano le soglie
             query = """
-            SELECT u.email, u.ticker, d.valore_euro, u.low_value, u.high_value
+            SELECT DISTINCT u.email, u.ticker, d.valore_euro, u.low_value, u.high_value
             FROM Users u
             JOIN Data d ON u.ticker = d.ticker
             WHERE 
-                (u.low_value IS NOT NULL AND d.valore_euro < u.low_value)
+                (u.low_value IS NOT NULL AND d.valore_euro < u.low_value AND u.low_value > 0)
                 OR 
-                (u.high_value IS NOT NULL AND d.valore_euro > u.high_value);
+                (u.high_value IS NOT NULL AND d.valore_euro > u.high_value AND u.high_value > 0);
             """
             cursor.execute(query)
             results = cursor.fetchall()
@@ -116,7 +116,7 @@ def scan_database_and_notify():
                     "condition": "lower" if value < low else "higher"
                 }
                 # Invia il messaggio al topic `to-notifier`
-                producer.send("to-notifier", json.dumps(message), callback=delivery_report)
+                producer.produce(out_topic, json.dumps(message), callback=delivery_report)
                 producer.flush() 
                 print(f"Produced: {message}")
                 logger.info(f"Notifica inviata: {message}")

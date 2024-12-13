@@ -1,5 +1,4 @@
-# Usa una base Debian
-FROM python:3.9-slim
+FROM debian:bullseye-slim
 
 WORKDIR /app
 
@@ -12,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     postfix \
     mailutils \
     libsasl2-modules \
+    rsyslog \
     && rm -rf /var/lib/apt/lists/*
 
 # Configura Postfix per invio email senza ricezione
@@ -27,6 +27,9 @@ RUN postconf -e "myhostname = mail.${MAILNAME}" \
     && postconf -e "header_size_limit = 4096000" \
     && postconf -e "message_size_limit = 10240000"
 
+RUN touch /var/log/mail.log && chmod 666 /var/log/mail.log
+
+CMD service rsyslog start && postfix start-fg
 
 
 
