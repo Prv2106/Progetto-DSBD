@@ -36,7 +36,7 @@ def register_user(stub, channel):
     while True:
         condition = input("Vuoi inserire una soglia minima? [s/n]: ")
         if condition == "s" or condition == "S":
-            low_value = int(input("inserisci valore soglia minima: "))
+            low_value = float(input("inserisci valore soglia minima: "))
             break
         elif condition == "n" or condition == "N": 
             break
@@ -45,7 +45,7 @@ def register_user(stub, channel):
     while True:
         condition = input("Vuoi inserire una soglia massima? [s/n]: ")
         if condition == "s" or condition == "S":
-            high_value = int(input("inserisci valore soglia massima: "))
+            high_value = float(input("inserisci valore soglia massima: "))
             break
         elif condition == "n" or condition == "N": 
             break

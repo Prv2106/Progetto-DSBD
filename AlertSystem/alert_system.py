@@ -69,6 +69,7 @@ def poll_loop():
                 il fatto che sia presente garantisce l'avvenuto aggiornamento dei valori
                 nel database da parte del DataCollector)
             """
+            logger.info(f"messaggio recuperato: {json.loads(msg.value().decode('utf-8'))}")
            
             scan_database_and_notify() # questa si occupa anche della produzione
             
@@ -93,7 +94,7 @@ def scan_database_and_notify():
     Scansiona il database per identificare ticker che superano le soglie e invia notifiche.
     """
     try:
-        conn = pymysql.connect(**db_config)
+        conn = pymysql.connect(**db_config.db_config)
         with conn.cursor() as cursor:
             # Query per trovare profili che superano le soglie
             query = """

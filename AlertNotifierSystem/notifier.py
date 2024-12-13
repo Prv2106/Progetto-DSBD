@@ -29,7 +29,7 @@ consumer_config = {
 }
 
 consumer = Consumer(consumer_config)
-in_topic = 'to-alert-system'  
+in_topic = 'to-notifier'  
 
 consumer.subscribe([in_topic]) 
 

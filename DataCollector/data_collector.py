@@ -158,10 +158,6 @@ def data_collector():
                         service = command_service.CommandService()
                         service.handle_insert_tickers(command_service.InsertTickerCommand(timestamp,ticker,price_in_eur,conn))
 
-                        ##### è qui che dobbiamo notificare al nuovo componente di aver finito
-                        producer.produce(out_topic, json.dumps("database aggiornato"))
-                        producer.flush()  # Ensure the message is sent
-
                         # Contiamo le occorrenze presenti per un dato ticker
                         service = query_service.QueryService()
                         count = service.handle_get_entry_count_by_ticker(query_service.GetEntryCountByTickerQuery(ticker,conn))
@@ -177,6 +173,10 @@ def data_collector():
                         # Gestione degli errori MySQL
                         logger.info(f"data_collector: Errore nelle query al database... Codice di errore: {e}")
                         continue  # Continuiamo con il prossimo ticker
+
+                ##### è qui che dobbiamo notificare al nuovo componente di aver finito
+                producer.produce(out_topic, json.dumps(f"database aggiornato: {datetime.now(tz)}"))
+                producer.flush()  
         
         except pymysql.MySQLError as e:
             # Gestione degli errori durante la connessione al database

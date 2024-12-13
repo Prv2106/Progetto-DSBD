@@ -88,9 +88,9 @@ def populate_db():
             # Apertura della connessione al database
             conn = pymysql.connect(**db_config.db_config)
             service = command_service.CommandService()
-            service.handle_register_user(command_service.RegisterUserCommand("utente1@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AAPL",conn))
-            service.handle_register_user(command_service.RegisterUserCommand("utente2@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AMZN",conn))
-            service.handle_register_user(command_service.RegisterUserCommand("utente3@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "GOOG",conn))
+            service.handle_register_user(command_service.RegisterUserCommand("utente1@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AAPL",-1,-1,conn))
+            service.handle_register_user(command_service.RegisterUserCommand("utente2@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AMZN",-1,-1,conn))
+            service.handle_register_user(command_service.RegisterUserCommand("utente3@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "GOOG",-1,-1,conn))
             success = True
         except pymysql.MySQLError as err:
             if err.args[0] == 1062: # Gli utenti sono stati già inseriti
@@ -135,7 +135,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             conn = pymysql.connect(**db_config.db_config)
            
             service = command_service.CommandService()
-            service.handle_register_user(command_service.RegisterUserCommand(request.email, hashed_password_str, request.ticker,conn))
+            service.handle_register_user(command_service.RegisterUserCommand(request.email, hashed_password_str, request.ticker,request.low_value,request.high_value,conn))
 
 
             # Creazione della risposta di successo

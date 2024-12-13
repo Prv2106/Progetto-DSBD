@@ -2,14 +2,12 @@ FROM python:3.9
 
 WORKDIR /app
 
-# TODO: vedere che dipendenze servono e aggiungerle opportunamente
 RUN pip install pymysql
-
 RUN pip install bcrypt pymysql
-
 RUN pip install cryptography
+RUN pip install confluent_kafka
 
 COPY DB/db_config.py /app/
 COPY AlertSystem/alert_system.py /app/
 
-# CMD [ "python", "alert_system.py"]
+CMD [ "python", "alert_system.py"]

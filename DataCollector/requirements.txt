@@ -2,3 +2,5 @@ pymysql
 requests
 yfinance==0.2.49
 cryptography
+confluent_kafka
+

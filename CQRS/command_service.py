@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Command per la registrazione dell'utente
 class RegisterUserCommand:
-    def __init__(self, email, hashed_pwd,ticker,conn):
+    def __init__(self, email, hashed_pwd, ticker, low_value, high_value, conn):
          # verifica che la password non sia vuota
         if not hashed_pwd:
             logger.error("password non inserita")
@@ -32,10 +32,12 @@ class RegisterUserCommand:
         INSERT INTO Users (email, pwd, ticker)
         VALUES (%s, %s, %s);
         """
-        self.email =email
+        self.email = email
         self.hashed_pwd = hashed_pwd
         self.ticker = ticker
         self.conn = conn
+        self.low_value = low_value
+        self.high_value = high_value
 
 
 
@@ -74,27 +76,6 @@ class DeleteUserCommand:
         """
         self.email = email
         self.conn = conn
-
-
-
-
-
-# QUERIEs
-
-
-# Query dato un ticker elimina l'occorrenza più vecchia nella tabella
-delete_old_query = """
-    DELETE FROM Data
-    WHERE (ticker, timestamp) IN (
-    SELECT * FROM (
-        SELECT ticker, MIN(timestamp) AS oldest_timestamp
-        FROM Data
-        WHERE ticker = %s
-        GROUP BY ticker
-    ) AS subquery
-);
-
-"""
 
 
 
@@ -151,7 +132,7 @@ class CommandService:
     def handle_register_user(self, command: RegisterUserCommand):
         # Apertura della connessione al database
         with command.conn.cursor() as cursor:
-            cursor.execute(command.register_user_command, (command.email, command.hashed_pwd, command.ticker,))
+            cursor.execute(command.register_user_command, (command.email, command.hashed_pwd, command.ticker,command.low_value,command.high_value,))
             command.conn.commit()
     
     
