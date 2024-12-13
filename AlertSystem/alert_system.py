@@ -52,6 +52,7 @@ consumer.subscribe([in_topic])
 
 
 def poll_loop():
+    logger.info("In attesa di messaggi dal topic 'to-alert-system'...")
     try:
         while True:
             # Poll for new messages from "in_topic"
@@ -111,7 +112,7 @@ def scan_database_and_notify():
                 message = {
                     "email": email,
                     "ticker": ticker,
-                    "condition": "low" if value < low else "high"
+                    "condition": "lower" if value < low else "higher"
                 }
                 # Invia il messaggio al topic `to-notifier`
                 producer.send("to-notifier", json.dumps(message), callback=delivery_report)

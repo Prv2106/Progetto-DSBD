@@ -90,8 +90,6 @@ def send_email(to_email, subject, body):
         print(f"Errore durante l'invio dell'email: {e}")
             
 
-   
-
 
 if __name__ == "__main__":
     poll_loop()

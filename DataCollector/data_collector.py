@@ -8,6 +8,9 @@ import logging
 import query_service
 import command_service
 import db_config
+import json
+from confluent_kafka import Producer
+
 
 tz = pytz.timezone('Europe/Rome') 
 
@@ -23,6 +26,23 @@ maximum_occurrences = 200 # numero max di entry nella tabella Data per ciascun t
 last_tickers = [] # lista dei ticker recuperati all'iterazione precedente
 
 
+
+kafka_broker = "kafka_container:9092"
+
+# configurazione produttore
+producer_config = {
+    'bootstrap.servers': kafka_broker,
+    'acks': 1, 
+    'linger.ms': 0, # tempo max (ms) che aspetta prima di inviare i messaggi accumulati nel buffer. Se 0, vengono inviati immediatamente.
+    'compression.type': 'gzip',
+    'max.in.flight.requests.per.connection': 1,  
+    'retries': 3 ,
+}  
+
+producer = Producer(producer_config)
+out_topic = 'to-alert-system'  
+
+
 # Funzione per recuperare l'ultimo valore del ticker da Yahoo! Finance
 def fetch_yfinance_data(ticker):
     try:    
@@ -32,7 +52,7 @@ def fetch_yfinance_data(ticker):
         data = stock.history(period="1d")
         
         """
-        dato che non abbiamo gestitola validazione del ticker passato dall'utente, abbiamo scelto di 
+        dato che non abbiamo gestito la validazione del ticker passato dall'utente, abbiamo scelto di 
         considerare una risposta vuota (dovuta ad esempio dall'inserimento di un ticker non valido) come un soft error, 
         in modo da non causare l'apertura del circuito in questo tipo di situazione       
         """
@@ -137,6 +157,10 @@ def data_collector():
                         # Inseriamo i dati nel database
                         service = command_service.CommandService()
                         service.handle_insert_tickers(command_service.InsertTickerCommand(timestamp,ticker,price_in_eur,conn))
+
+                        ##### è qui che dobbiamo notificare al nuovo componente di aver finito
+                        producer.produce(out_topic, json.dumps("database aggiornato"))
+                        producer.flush()  # Ensure the message is sent
 
                         # Contiamo le occorrenze presenti per un dato ticker
                         service = query_service.QueryService()

@@ -90,8 +90,11 @@ services:
     container_name: alert_notifier_container
     restart: always
 
+  # server SMTP per invio delle e-mail
   postfix:
     build:
+      context: ./SMTP
+      dockerfile: dockerfile-postfix
     container_name: postfix-container
     ports:
       - "587:587" 
