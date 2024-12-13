@@ -1,0 +1,37 @@
+# Usa una base Debian
+FROM python:3.9-slim
+
+WORKDIR /app
+
+ENV MAILNAME=yahoo_finance.com
+ENV RELAYHOST=""  
+
+
+# Installiamo Postfix e dipendenze necessarie per il nostro server SMTP
+RUN apt-get update && apt-get install -y \
+    postfix \
+    mailutils \
+    libsasl2-modules \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configura Postfix per invio email senza ricezione
+RUN postconf -e "myhostname = mail.${MAILNAME}" \
+    && postconf -e "mydomain = ${MAILNAME}" \
+    && postconf -e "mydestination = $myhostname, localhost.$mydomain, localhost, $mydomain" \
+    && postconf -e "relayhost = ${RELAYHOST}" \
+    && postconf -e "smtp_sasl_auth_enable = no" \
+    && postconf -e "smtp_sasl_password_maps = " \
+    && postconf -e "smtp_sasl_security_options = " \
+    && postconf -e "smtp_tls_security_level = may" \
+    && postconf -e "smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt" \
+    && postconf -e "header_size_limit = 4096000" \
+    && postconf -e "message_size_limit = 10240000"
+
+# Espone la porta SMTP
+EXPOSE 25 587  
+
+# Avvia Postfix e mantieni il container in esecuzione
+CMD service postfix start && tail -f /var/log/mail.log
+
+
+

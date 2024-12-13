@@ -1,5 +1,4 @@
 from confluent_kafka import Consumer, Producer
-from datetime import datetime
 import pymysql
 import json
 import logging
@@ -13,10 +12,11 @@ logger = logging.getLogger(__name__)
 
 """
     il componente AlertSystem è un servizio indipendente che, alla ricezione di messaggio 
-    nel topic  Kafka  "to-alert-system" (kafka consumer), scandisce il database e, per ogni 
-    profilo in cui il valore del ticker è o maggiore di  high-value o minore di low-value (se dati), 
-    invia un messaggio  (kafka producer)  sul topic Kafka "to-notifier"  contenente i parametri 
-                                                <email, ticker,  condizione di superamento soglia>.
+    nel topic  Kafka  "to-alert-system" (kafka consumer), scandisce il database e, 
+    per ogni profilo in cui il valore del ticker è o maggiore di  high-value o minore 
+    di low-value (se dati), invia un messaggio  (kafka producer)  sul topic Kafka 
+    "to-notifier"  contenente i parametri 
+                                    <email, ticker,  condizione di superamento soglia>.
 """
 
 # configurazione indirizzo del broker (sfruttando il DNS di docker)
