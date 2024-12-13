@@ -9,6 +9,7 @@ import time
 import bcrypt
 import users_command_service
 import users_query_service
+import data_query_service
 
 
 
@@ -28,42 +29,6 @@ db_config = {
 }
 
 
-# QUERIEs
-
-update_user_query = """
-    UPDATE Users
-    SET ticker = %s
-    WHERE email = %s;
-"""
-
-delete_user_query = """
-    DELETE FROM Users
-    WHERE email = %s;
-"""
-
-last_value_query = """
-    SELECT * 
-    FROM Data 
-    WHERE ticker = (SELECT ticker FROM Users WHERE email = %s)
-    ORDER BY timestamp DESC
-    LIMIT 1;
-"""
-
-average_values_query = """
-    SELECT ticker, AVG(valore_euro) AS media_valore
-    FROM (
-        SELECT *
-        FROM Data
-        WHERE ticker = (SELECT ticker FROM Users WHERE email = %s) 
-        ORDER BY timestamp DESC
-        LIMIT %s
-     ) AS ultimi_valori
-    GROUP BY ticker;
-"""
-
-count_ticker_query = """
-    SELECT COUNT(*) FROM Data WHERE ticker = (SELECT ticker FROM Users WHERE email = %s) 
-"""
 
 
 def extract_metadata(context):
@@ -133,9 +98,9 @@ def populate_db():
             # Apertura della connessione al database
             conn = pymysql.connect(**db_config)
             command_users_service = users_command_service.CommandUsersService()
-            command_users_service.handle_register_users(users_command_service.RegisterUsersCommand("utente1@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AAPL",conn))
-            command_users_service.handle_register_users(users_command_service.RegisterUsersCommand("utente2@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AMZN",conn))
-            command_users_service.handle_register_users(users_command_service.RegisterUsersCommand("utente3@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "GOOG",conn))
+            command_users_service.handle_register_user(users_command_service.RegisterUserCommand("utente1@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AAPL",conn))
+            command_users_service.handle_register_user(users_command_service.RegisterUserCommand("utente2@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AMZN",conn))
+            command_users_service.handle_register_user(users_command_service.RegisterUserCommand("utente3@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "GOOG",conn))
             success = True
         except pymysql.MySQLError as err:
             if err.args[0] == 1062: # Gli utenti sono stati già inseriti
@@ -180,7 +145,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             conn = pymysql.connect(**db_config)
            
             command_users_service = users_command_service.CommandUsersService()
-            command_users_service.handle_register_users(users_command_service.RegisterUsersCommand(request.email, hashed_password_str, request.ticker,conn))
+            command_users_service.handle_register_user(users_command_service.RegisterUserCommand(request.email, hashed_password_str, request.ticker,conn))
 
 
             # Creazione della risposta di successo
@@ -283,10 +248,9 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 logger.info(f"Aggiornamento ticker utente: {request.email}, Ticker: {request.new_ticker}")
             
                 conn = pymysql.connect(**db_config)
-                with conn.cursor() as cursor:
-                    cursor.execute(update_user_query, (request.new_ticker, request.email))
-                    conn.commit()
-
+                command_users_service = users_command_service.CommandUsersService()
+                command_users_service.handle_update_user_ticker(users_command_service.UpdateUserTickerCommand(request.new_ticker, request.email,conn))
+                
                 response = usermanagement_pb2.UserResponse(success=True, message="Ticker aggiornato con successo!")
 
             except pymysql.MySQLError as err:
@@ -321,9 +285,9 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 logger.info(f"Eliminazione dell'utente: {request.email}")
             
                 conn = pymysql.connect(**db_config)
-                with conn.cursor() as cursor:
-                    cursor.execute(delete_user_query, (request.email))
-                    conn.commit()
+                
+                command_users_service = users_command_service.CommandUsersService()
+                command_users_service.handle_delete_user(users_command_service.DeleteUserCommand(request.email,conn))
 
                 response = usermanagement_pb2.UserResponse(success=True, message="Eliminazione avvenuta con successo")
 
@@ -359,15 +323,15 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 logger.info(f"Recupero ultimo valore del ticker seguito dall'utente: {request.email}")
             
                 conn = pymysql.connect(**db_config)
-                with conn.cursor() as cursor:
-                    cursor.execute(last_value_query, (request.email))
-                    result = cursor.fetchone()
-                    if result is None:
-                        response = usermanagement_pb2.StockValueResponse(success = False, message = "Nessun valore disponibile per il ticker registrato")
-                    else: 
-                        timestamp, ticker, value = result
-                        logger.info(f"timestamp: {timestamp}, ticker: {ticker}, value: {value}")
-                        response = usermanagement_pb2.StockValueResponse(success = True, message = "Valore recuperato", timestamp = str(timestamp), ticker = ticker, value = float(value))
+                
+                query_data_service = data_query_service.QueryDataService()
+                result = query_data_service.handle_get_last_ticker_value(data_query_service.GetLastTickerValueQuery(request.email,conn))
+                if result is None:
+                    response = usermanagement_pb2.StockValueResponse(success = False, message = "Nessun valore disponibile per il ticker registrato")
+                else: 
+                    timestamp, ticker, value = result
+                    logger.info(f"timestamp: {timestamp}, ticker: {ticker}, value: {value}")
+                    response = usermanagement_pb2.StockValueResponse(success = True, message = "Valore recuperato", timestamp = str(timestamp), ticker = ticker, value = float(value))
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
@@ -401,23 +365,24 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 logger.info(f"Recupero media degli ultimi {request.num_values} valori del ticker seguito dall'utente: {request.email}")
             
                 conn = pymysql.connect(**db_config)
-                with conn.cursor() as cursor:
-                    cursor.execute(average_values_query, (request.email, request.num_values))
-                    result = cursor.fetchone()
-                    if result is None:
-                        response = usermanagement_pb2.AverageResponse(success = False, message = "Nessun valore disponibile per il ticker registrato")
-                    else: 
-                        ticker, average = result
-                        logger.info(f"ticker: {ticker}, average: {average}")
+                
+                query_data_service = data_query_service.QueryDataService()
+                result = query_data_service.handle_get_average_ticker_value(data_query_service.GetAverageTickerValueQuery(request.email, request.num_values,conn))
+                if result is None:
+                    response = usermanagement_pb2.AverageResponse(success = False, message = "Nessun valore disponibile per il ticker registrato")
+                else: 
+                    ticker, average = result
+                    logger.info(f"ticker: {ticker}, average: {average}")
 
-                        # facciamo anche la query per vedere quante occorrenze ci sono
-                        cursor.execute(count_ticker_query, (request.email))
-                        count = cursor.fetchone()[0]
-                        note_text = ''
-                        if count < request.num_values: # se sono presenti nel DB meno valori di quelli indicati
-                            note_text = f" N.B: il valore inserito ({request.num_values}) è maggiore al massimo numero di valori presenti nel database ({count}), la media verrà calcolata per {count} valori"
+                    # facciamo anche la query per vedere quante occorrenze ci sono
+                    query_data_service = data_query_service.QueryDataService()
+                    count = query_data_service.handle_get_ticker_count(data_query_service.GetTickerCountQuery(request.email,conn))
 
-                        response = usermanagement_pb2.AverageResponse(success=True, message=f"Media recuperata con successo {note_text}", ticker = ticker, average = float(average))
+                    note_text = ''
+                    if count < request.num_values: # se sono presenti nel DB meno valori di quelli indicati
+                        note_text = f" N.B: il valore inserito ({request.num_values}) è maggiore al massimo numero di valori presenti nel database ({count}), la media verrà calcolata per {count} valori"
+
+                    response = usermanagement_pb2.AverageResponse(success=True, message=f"Media recuperata con successo {note_text}", ticker = ticker, average = float(average))
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL

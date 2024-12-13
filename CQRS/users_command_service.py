@@ -6,22 +6,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# Configurazione per il database
-db_config = {
-    "host": "mysql_container",
-    "user": "alberto_giuseppe",
-    "password": "progetto",
-    "database": "DSBD_progetto"
-}
-
-
-
 
 # Command per la registrazione dell'utente
-class RegisterUsersCommand:
+class RegisterUserCommand:
     def __init__(self, email, hashed_pwd,ticker,conn):
-        logger.info("Funzione COMMAND") 
-
          # verifica che la password non sia vuota
         if not hashed_pwd:
             logger.error("password non inserita")
@@ -55,16 +43,34 @@ class RegisterUsersCommand:
 
 
 
-#TODO:
-# Command per l'aggiornamento del ticker
+
+# Command per l'aggiornamento del ticker di un utente
+class UpdateUserTickerCommand:
+    def __init__(self,new_ticker,email,conn):
+            
+        self.update_user_ticker_command = """
+            UPDATE Users
+            SET ticker = %s
+            WHERE email = %s;
+        """
+        self.new_ticker = new_ticker
+        self.email = email
+        self.conn = conn
 
 
 
 
 
-
-
-
+# Command per l'eliminazione di un utente
+class DeleteUserCommand:
+    def __init__(self,email,conn):
+    
+        self.delete_user_command = """
+            DELETE FROM Users
+            WHERE email = %s;
+        """
+        self.email = email
+        self.conn = conn
 
 
 
@@ -78,13 +84,23 @@ class RegisterUsersCommand:
 # Servizio che gestisce gli users command
 class CommandUsersService:
     
-    def handle_register_users(self, command: RegisterUsersCommand):
+    def handle_register_user(self, command: RegisterUserCommand):
         # Apertura della connessione al database
         with command.conn.cursor() as cursor:
-            cursor.execute(command.register_user_command, (command.email, command.hashed_pwd, command.ticker))
+            cursor.execute(command.register_user_command, (command.email, command.hashed_pwd, command.ticker,))
             command.conn.commit()
     
     
+    def handle_update_user_ticker(self, command: UpdateUserTickerCommand):
+        with command.conn.cursor() as cursor:
+            cursor.execute(command.update_user_ticker_command, (command.new_ticker, command.email,))
+            command.conn.commit()
+
+
+    def handle_delete_user(self, command: DeleteUserCommand):
+        with command.conn.cursor() as cursor:
+            cursor.execute(command.delete_user_command, (command.email,))
+            command.conn.commit()
 
 
 
@@ -93,8 +109,3 @@ class CommandUsersService:
 
 
 
-
-
-
-class CommandDataService:
-    pass

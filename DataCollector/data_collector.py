@@ -5,6 +5,9 @@ import yfinance as yf
 import pytz
 from circuit_breaker import CircuitBreakerOpenException, CircuitBreaker
 import logging
+import users_query_service
+import data_command_service
+
 
 tz = pytz.timezone('Europe/Rome') 
 
@@ -21,31 +24,6 @@ db_config = {
     "password": "progetto",
     "database": "DSBD_progetto"
 }
-
-# QUERIEs
-insert_query = """
-    INSERT INTO Data (timestamp, ticker, valore_euro)
-    VALUES (%s, %s, %s);
-"""
-
-# Query dato un ticker elimina l'occorrenza più vecchia nella tabella
-delete_old_query = """
-    DELETE FROM Data
-    WHERE (ticker, timestamp) IN (
-    SELECT * FROM (
-        SELECT ticker, MIN(timestamp) AS oldest_timestamp
-        FROM Data
-        WHERE ticker = %s
-        GROUP BY ticker
-    ) AS subquery
-);
-
-"""
-
-delete_unused_tickers_query = """
-    DELETE FROM Data
-    WHERE ticker = %s
-"""
 
 
 # creiamo un'istanza del Circuit Breaker
@@ -91,18 +69,11 @@ def fetch_yfinance_data(ticker):
 # funzione che si occupa di recuperare la lista dei ticker dalla tabella Users del database
 def fetch_ticker_from_db(conn):
     try:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT DISTINCT ticker FROM Users;") # usiamo la keyword DISTINCT per non passare più volte uno stesso ticker a yf           
-            result = cursor.fetchall() 
-
-            if not result:  # condizione di lista vuota
-                return []
-
-            # otteniamo una lista a partire dalla lista di tuple
-            # result è una lista di tuple per esempio: [('AAPL',), ('GOOG',), ('TSLA',)]
-
-            tickers = [row[0] for row in result]
-            return tickers
+        query_users_service = users_query_service.QueryUsersService()
+        result = query_users_service.handle_get_distinct_users_ticker(users_query_service.GetDistinctUsersTicker(conn))
+        if not result:  # condizione di lista vuota
+            return []
+        return result     
         
     except Exception as e:
         logger.error(f"data_collector: Errore durante il recupero dei ticker dal db, codice di errore: {e}")
