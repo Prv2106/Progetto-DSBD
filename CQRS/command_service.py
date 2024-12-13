@@ -40,10 +40,8 @@ class RegisterUserCommand:
         email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
         return re.match(email_regex, email) is not None
     
-
-
-
-
+    
+    
 # Command per l'aggiornamento del ticker di un utente
 class UpdateUserTickerCommand:
     def __init__(self,new_ticker,email,conn):
@@ -76,13 +74,74 @@ class DeleteUserCommand:
 
 
 
+# QUERIEs
+
+
+# Query dato un ticker elimina l'occorrenza più vecchia nella tabella
+delete_old_query = """
+    DELETE FROM Data
+    WHERE (ticker, timestamp) IN (
+    SELECT * FROM (
+        SELECT ticker, MIN(timestamp) AS oldest_timestamp
+        FROM Data
+        WHERE ticker = %s
+        GROUP BY ticker
+    ) AS subquery
+);
+
+"""
+
+
+
+# Command per la cancellazione dei ticker
+class DeleteTickerCommand:
+    def __init__(self,ticker,conn):
+        self.delete_unused_tickers_command = """
+            DELETE FROM Data
+            WHERE ticker = %s
+        """
+        self.ticker = ticker
+        self.conn = conn
+
+# Command per l'inserimento dei ticker
+class InsertTickerCommand:
+    def __init__(self, timestamp,ticker,price_in_eur,conn):
+        self.insert_ticker_command = """
+            INSERT INTO Data (timestamp, ticker, valore_euro)
+            VALUES (%s, %s, %s);
+        """
+        self.timestamp = timestamp
+        self.ticker = ticker
+        self.price_in_eur = price_in_eur
+        self.conn = conn
+
+
+# Command per la rimozione dell'entry più vecchia per un dato ticker
+class DeleteOldEntryByTicker:
+    def _init__(self,ticker,conn):
+        self.delete_old_entry_by_ticker_command = """
+            DELETE FROM Data
+            WHERE (ticker, timestamp) IN (
+            SELECT * FROM (
+                SELECT ticker, MIN(timestamp) AS oldest_timestamp
+                FROM Data
+                WHERE ticker = %s
+                GROUP BY ticker
+            ) AS subquery
+        );
+
+        """
+        
+        self.ticker = ticker
+        self.conn = conn
+
 
 
     
  
 
-# Servizio che gestisce gli users command
-class CommandUsersService:
+# Servizio che gestisce i command
+class CommandService:
     
     def handle_register_user(self, command: RegisterUserCommand):
         # Apertura della connessione al database
@@ -103,9 +162,21 @@ class CommandUsersService:
             command.conn.commit()
 
 
+    def handle_delete_tickers(self, command: DeleteTickerCommand):
+        with command.conn.cursor() as cursor:
+            cursor.execute(command.delete_unused_tickers_command, (command.ticker,))
+            command.conn.commit()
+            
+            
+    def handle_insert_tickers(self, command: InsertTickerCommand):
+        with command.conn.cursor() as cursor:
+            cursor.execute(command.insert_ticker_command, (command.timestamp, command.ticker,command.price_in_eur,))
+            command.conn.commit()
 
 
 
-
-
+    def handle_delete_old_entries_by_ticker(self, command: DeleteOldEntryByTicker):
+        with command.conn.cursor() as cursor:
+            cursor.execute(command.delete_old_entry_by_ticker_command, (command.ticker,))
+            command.conn.commit()
 

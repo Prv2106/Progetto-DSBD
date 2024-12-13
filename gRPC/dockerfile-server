@@ -11,11 +11,9 @@ RUN pip install bcrypt pymysql
 RUN pip install cryptography
 
 
-COPY gRPC/usermanagement_pb2.py gRPC/usermanagement_pb2_grpc.py gRPC/server.py /app/
-COPY CQRS/users_command_service.py /app/
-COPY CQRS/data_command_service.py /app/
-COPY CQRS/users_query_service.py /app/
-COPY CQRS/data_query_service.py /app/
+COPY gRPC/usermanagement_pb2.py gRPC/usermanagement_pb2_grpc.py gRPC/server.py .
+COPY CQRS/command_service.py .
+COPY CQRS/query_service.py .
 
 
 

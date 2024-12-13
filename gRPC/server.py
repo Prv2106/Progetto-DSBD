@@ -7,9 +7,9 @@ import pymysql
 import logging
 import time
 import bcrypt
-import users_command_service
-import users_query_service
-import data_query_service
+import command_service
+import query_service
+
 
 
 
@@ -97,10 +97,10 @@ def populate_db():
         try:
             # Apertura della connessione al database
             conn = pymysql.connect(**db_config)
-            command_users_service = users_command_service.CommandUsersService()
-            command_users_service.handle_register_user(users_command_service.RegisterUserCommand("utente1@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AAPL",conn))
-            command_users_service.handle_register_user(users_command_service.RegisterUserCommand("utente2@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AMZN",conn))
-            command_users_service.handle_register_user(users_command_service.RegisterUserCommand("utente3@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "GOOG",conn))
+            service = command_service.CommandService()
+            service.handle_register_user(command_service.RegisterUserCommand("utente1@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AAPL",conn))
+            service.handle_register_user(command_service.RegisterUserCommand("utente2@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "AMZN",conn))
+            service.handle_register_user(command_service.RegisterUserCommand("utente3@example.com", bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), "GOOG",conn))
             success = True
         except pymysql.MySQLError as err:
             if err.args[0] == 1062: # Gli utenti sono stati già inseriti
@@ -144,8 +144,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             # Apertura della connessione al database
             conn = pymysql.connect(**db_config)
            
-            command_users_service = users_command_service.CommandUsersService()
-            command_users_service.handle_register_user(users_command_service.RegisterUserCommand(request.email, hashed_password_str, request.ticker,conn))
+            service = command_service.CommandService()
+            service.handle_register_user(command_service.RegisterUserCommand(request.email, hashed_password_str, request.ticker,conn))
 
 
             # Creazione della risposta di successo
@@ -198,8 +198,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 # LOGICA DI LOGIN: dapprima verifichiamo che l'email inserita dall'utente sia presente...
                 # se l'email è presente allora la password recuperata dal db viene confrontata con quella inviata dall'utente
 
-                query_users_service = users_query_service.QueryUsersService()
-                hashed_password_db = query_users_service.handle_get_user_password(users_query_service.GetUserPasswordQuery(request.email,conn))
+                service = query_service.QueryService()
+                hashed_password_db = service.handle_get_user_password(query_service.GetUserPasswordQuery(request.email,conn))
 
                 if hashed_password_db is None:
                     response = usermanagement_pb2.UserResponse(success=False, message="Email o password non corrette")
@@ -248,8 +248,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 logger.info(f"Aggiornamento ticker utente: {request.email}, Ticker: {request.new_ticker}")
             
                 conn = pymysql.connect(**db_config)
-                command_users_service = users_command_service.CommandUsersService()
-                command_users_service.handle_update_user_ticker(users_command_service.UpdateUserTickerCommand(request.new_ticker, request.email,conn))
+                service = command_service.CommandService()
+                service.handle_update_user_ticker(command_service.UpdateUserTickerCommand(request.new_ticker, request.email,conn))
                 
                 response = usermanagement_pb2.UserResponse(success=True, message="Ticker aggiornato con successo!")
 
@@ -286,8 +286,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             
                 conn = pymysql.connect(**db_config)
                 
-                command_users_service = users_command_service.CommandUsersService()
-                command_users_service.handle_delete_user(users_command_service.DeleteUserCommand(request.email,conn))
+                service = command_service.CommandService()
+                service.handle_delete_user(command_service.DeleteUserCommand(request.email,conn))
 
                 response = usermanagement_pb2.UserResponse(success=True, message="Eliminazione avvenuta con successo")
 
@@ -324,8 +324,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             
                 conn = pymysql.connect(**db_config)
                 
-                query_data_service = data_query_service.QueryDataService()
-                result = query_data_service.handle_get_last_ticker_value(data_query_service.GetLastTickerValueQuery(request.email,conn))
+                service = query_service.QueryService()
+                result = service.handle_get_last_ticker_value(query_service.GetLastTickerValueQuery(request.email,conn))
                 if result is None:
                     response = usermanagement_pb2.StockValueResponse(success = False, message = "Nessun valore disponibile per il ticker registrato")
                 else: 
@@ -366,8 +366,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             
                 conn = pymysql.connect(**db_config)
                 
-                query_data_service = data_query_service.QueryDataService()
-                result = query_data_service.handle_get_average_ticker_value(data_query_service.GetAverageTickerValueQuery(request.email, request.num_values,conn))
+                service = query_service.QueryService()
+                result = service.handle_get_average_ticker_value(query_service.GetAverageTickerValueQuery(request.email, request.num_values,conn))
                 if result is None:
                     response = usermanagement_pb2.AverageResponse(success = False, message = "Nessun valore disponibile per il ticker registrato")
                 else: 
@@ -375,8 +375,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                     logger.info(f"ticker: {ticker}, average: {average}")
 
                     # facciamo anche la query per vedere quante occorrenze ci sono
-                    query_data_service = data_query_service.QueryDataService()
-                    count = query_data_service.handle_get_ticker_count(data_query_service.GetTickerCountQuery(request.email,conn))
+                    service = query_service.QueryService()
+                    count = service.handle_get_ticker_count_by_user(query_service.GetTickerCountByUserQuery(request.email,conn))
 
                     note_text = ''
                     if count < request.num_values: # se sono presenti nel DB meno valori di quelli indicati

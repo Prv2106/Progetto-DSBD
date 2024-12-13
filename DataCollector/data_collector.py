@@ -5,8 +5,8 @@ import yfinance as yf
 import pytz
 from circuit_breaker import CircuitBreakerOpenException, CircuitBreaker
 import logging
-import users_query_service
-import data_command_service
+import query_service
+import command_service
 
 
 tz = pytz.timezone('Europe/Rome') 
@@ -69,8 +69,8 @@ def fetch_yfinance_data(ticker):
 # funzione che si occupa di recuperare la lista dei ticker dalla tabella Users del database
 def fetch_ticker_from_db(conn):
     try:
-        query_users_service = users_query_service.QueryUsersService()
-        result = query_users_service.handle_get_distinct_users_ticker(users_query_service.GetDistinctUsersTicker(conn))
+        service = query_service.QueryService()
+        result = service.handle_get_distinct_users_ticker(query_service.GetDistinctUsersTicker(conn))
         if not result:  # condizione di lista vuota
             return []
         return result     
@@ -86,11 +86,11 @@ def data_collector():
     request_count = 0 # contatore per gestire la velocità delle richieste
 
     while True:
-        logger.info(f">>>>>>>>>>>>>>>>>>>>>>>>> Ciclo {request_count + 1}:")
         if request_count > 300:
             time.sleep(3600) # aggiorna ogni ora
         else:
-            time.sleep(2)
+            time.sleep(60)
+        logger.info(f">>>>>>>>>>>>>>>>>>>>>>>>> Ciclo {request_count + 1}:")
         
         request_count += 1
         
@@ -110,60 +110,58 @@ def data_collector():
                     continue # riproviamo
 
                 ############### Eliminazione dei ticker inutilizzati 
-                with conn.cursor() as cursor:
-                    for ticker in last_tickers:  # Confronta i ticker precedenti con quelli attuali
-                        if ticker not in tickers:  # Ticker obsoleti
-                            try:
-                                cursor.execute(delete_unused_tickers_query, (ticker,))
-                                logger.info(f"data_collector: Ticker '{ticker}' rimosso dal database.")
-                            except pymysql.MySQLError as e:
-                                logger.error(f"data_collector: Errore durante l'eliminazione del ticker '{ticker}': {e}")
-                                continue
-
-                    # Aggiorna last_tickers con la lista attuale
-                    last_tickers = tickers[:]
+                for ticker in last_tickers:  # Confronta i ticker precedenti con quelli attuali
+                    if ticker not in tickers:  # Ticker obsoleti
+                        try:
+                            service = command_service.CommandService()
+                            service.handle_delete_tickers(command_service.DeleteTickerCommand(ticker,conn))
+                            logger.info(f"data_collector: Ticker '{ticker}' rimosso dal database.")
+                        except pymysql.MySQLError as e:
+                            logger.error(f"data_collector: Errore durante l'eliminazione del ticker '{ticker}': {e}")
+                            continue
+            
+                # Aggiorna last_tickers con la lista attuale
+                last_tickers = tickers[:]
 
 
                 ############### Inserimento degli ultimi valori per i ticker
-                with conn.cursor() as cursor:
-                    for ticker in tickers:
-                        try:
-                            # Richiede i dati al Circuit Breaker
-                            price_in_eur = circuit_breaker.call(fetch_yfinance_data, ticker)
+                for ticker in tickers:
+                    try:
+                        # Richiede i dati al Circuit Breaker
+                        price_in_eur = circuit_breaker.call(fetch_yfinance_data, ticker)
+                    
+                    except CircuitBreakerOpenException as e:
+                        # Eccezione sollevata quando il Circuit Breaker è nello stato "OPEN"
+                        logger.error(f"{e}")
+                        continue  # Continuiamo con il prossimo ticker
+                    except Exception as e:
+                        # Altri tipi di eccezione (es. server fallisce)
+                        logger.error(f"{e}")
+                        continue  # Continuiamo con il prossimo ticker
+
+                    # Otteniamo il timestamp corrente
+                    timestamp = datetime.now(tz)
+
+                    try:
+                        # Inseriamo i dati nel database
+                        service = command_service.CommandService()
+                        service.handle_insert_tickers(command_service.InsertTickerCommand(timestamp,ticker,price_in_eur,conn))
+
+                        # Contiamo le occorrenze presenti per un dato ticker
+                        service = query_service.QueryService()
+                        count = service.handle_get_entry_count_by_ticker(query_service.GetEntryCountByTickerQuery(ticker,conn))
+                    
+                        # Se ci sono più di maximum_occurrences, eliminiamo la più vecchia
+                        if count > maximum_occurrences:
+                            service = command_service.QueryService()
+                            service.handle_delete_old_entries_by_ticker(command_service.DeleteOldEntryByTicker(ticker,conn))
                         
-                        except CircuitBreakerOpenException as e:
-                            # Eccezione sollevata quando il Circuit Breaker è nello stato "OPEN"
-                            logger.error(f"{e}")
-                            continue  # Continuiamo con il prossimo ticker
-                        except Exception as e:
-                            # Altri tipi di eccezione (es. server fallisce)
-                            logger.error(f"{e}")
-                            continue  # Continuiamo con il prossimo ticker
+                        logger.info(f"data_collector: Ticker '{ticker}' aggiornato con successo, prezzo in uscita -> {price_in_eur:.2f} ({datetime.now(tz)})")
 
-                        # Otteniamo il timestamp corrente
-                        timestamp = datetime.now(tz)
-
-                        try:
-                            # Inseriamo i dati nel database
-                            cursor.execute(insert_query, (timestamp, ticker, price_in_eur))
-
-                            # Contiamo le occorrenze presenti per un dato ticker
-                            cursor.execute("SELECT COUNT(*) FROM Data WHERE ticker = %s", (ticker,))
-                            count = cursor.fetchone()[0]
-
-                            # Se ci sono più di maximum_occurrences, eliminiamo la più vecchia
-                            if count > maximum_occurrences:
-                                cursor.execute(delete_old_query, (ticker,))
-                            
-                            logger.info(f"data_collector: Ticker '{ticker}' aggiornato con successo, prezzo in uscita -> {price_in_eur:.2f} ({datetime.now(tz)})")
-
-                        except pymysql.MySQLError as e:
-                            # Gestione degli errori MySQL
-                            logger.info(f"data_collector: Errore nelle query al database... Codice di errore: {e}")
-                            continue  # Continuiamo con il prossimo ticker
-
-                    # Confermiamo tutte le modifiche nel database
-                    conn.commit()
+                    except pymysql.MySQLError as e:
+                        # Gestione degli errori MySQL
+                        logger.info(f"data_collector: Errore nelle query al database... Codice di errore: {e}")
+                        continue  # Continuiamo con il prossimo ticker
         
         except pymysql.MySQLError as e:
             # Gestione degli errori durante la connessione al database

@@ -12,8 +12,8 @@ services:
 
   data-collector:
     build:
-      context: ./DataCollector
-      dockerfile: dockerfile-datacollector
+      context: .
+      dockerfile: DataCollector/dockerfile-datacollector
     depends_on:
       - db
     networks:
