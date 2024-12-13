@@ -9,4 +9,7 @@ RUN pip install bcrypt pymysql
 
 RUN pip install cryptography
 
+COPY DB/db_config.py /app/
+COPY AlertSystem/alert_system.py /app/
+
 # CMD [ "python", "alert_system.py"]

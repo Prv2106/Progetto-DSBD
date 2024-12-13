@@ -12,7 +12,7 @@ services:
 
   data-collector:
     build:
-      context: ./DataCollector
+      context: .
       dockerfile: dockerfile-datacollector
     depends_on:
       - db
@@ -68,7 +68,7 @@ services:
   # AlertSystem
   alert-system:
     build:
-      context: ./AlertSystem
+      context: .
       dockerfile: dockerfile-alertsystem
     depends_on:
       - kafka

@@ -6,7 +6,8 @@ COPY requirements.txt .
 
 RUN pip install -r requirements.txt
 
-COPY data_collector.py .
-COPY circuit_breaker.py .
+COPY DataCollector/data_collector.py /app/
+COPY DataCollector/circuit_breaker.py /app/
+COPY DB/db_config.py /app/
 
 CMD ["python", "data_collector.py"]

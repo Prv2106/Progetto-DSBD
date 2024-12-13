@@ -8,7 +8,7 @@ import logging
 import time
 import bcrypt
 import users_command_service
-
+import db_config
 
 
 # Configurazione del logger
@@ -17,14 +17,6 @@ logger = logging.getLogger(__name__)
 
 request_cache = {}  # dizionario di dizionari per consentire il controllo non soltanto sulla richiesta ma anche sull'utente
 cache_lock = Lock() # per gestire l'aggiornamento della cache in modo consistente (pool di thread)
-
-# Configurazione per il database
-db_config = {
-    "host": "mysql_container",
-    "user": "alberto_giuseppe",
-    "password": "progetto",
-    "database": "DSBD_progetto"
-}
 
 
 # QUERIEs
@@ -166,6 +158,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             return result # la restituiamo
 
         # questa parte del codice a seguire viene eseguita solo se quella da processare è una nuova richiesta
+
         conn = None  # Inizializziamo conn con None
         try:
             # Logica di registrazione utente

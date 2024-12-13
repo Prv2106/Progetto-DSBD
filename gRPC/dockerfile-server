@@ -16,7 +16,6 @@ COPY CQRS/users_command_service.py /app/
 COPY CQRS/data_command_service.py /app/
 COPY CQRS/users_query_service.py /app/
 COPY CQRS/data_query_service.py /app/
-
-
+COPY DB/db_config.py /app/
 
 CMD [ "python", "server.py"]

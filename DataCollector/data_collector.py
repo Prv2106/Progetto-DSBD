@@ -5,6 +5,7 @@ import yfinance as yf
 import pytz
 from circuit_breaker import CircuitBreakerOpenException, CircuitBreaker
 import logging
+import db_config
 
 tz = pytz.timezone('Europe/Rome') 
 
@@ -13,14 +14,6 @@ tz = pytz.timezone('Europe/Rome')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-# Configurazione per il database
-db_config = {
-    "host": "mysql_container",
-    "user": "alberto_giuseppe",
-    "password": "progetto",
-    "database": "DSBD_progetto"
-}
 
 # QUERIEs
 insert_query = """
