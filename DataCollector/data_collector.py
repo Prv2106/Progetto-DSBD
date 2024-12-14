@@ -81,7 +81,7 @@ def fetch_yfinance_data(ticker):
 def fetch_ticker_from_db(conn):
     try:
         service = query_service.QueryService()
-        result = service.handle_get_distinct_users_ticker(query_service.GetDistinctUsersTicker(conn))
+        result = service.handle_get_distinct_users_ticker(query_service.GetDistinctUsersTickerQuery(conn))
         if not result:  # condizione di lista vuota
             return []
         return result     
@@ -165,7 +165,7 @@ def data_collector():
                         # Se ci sono più di maximum_occurrences, eliminiamo la più vecchia
                         if count > maximum_occurrences:
                             service = command_service.QueryService()
-                            service.handle_delete_old_entries_by_ticker(command_service.DeleteOldEntryByTicker(ticker,conn))
+                            service.handle_delete_old_entries_by_ticker(command_service.DeleteOldEntryByTickerCommand(ticker,conn))
                         
                         logger.info(f"data_collector: Ticker '{ticker}' aggiornato con successo, prezzo in uscita -> {price_in_eur:.2f} ({datetime.now(tz)})")
 

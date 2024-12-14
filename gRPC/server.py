@@ -391,6 +391,134 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
 
 
+
+
+
+    def UpdateLowValue(self, request, context):
+        logger.info("Funzione richiesta: UpdateLowValue")
+        user_id, request_id = extract_metadata(context)
+
+        result = handle_request_cache(request_id, user_id)
+        if result:
+            # test per il timeout
+            #time.sleep(1)
+            return result 
+        else:
+            try:
+                logger.info(f"Aggiornamento low_value utente: {request.email}, low_value: {request.low_value}")
+            
+                conn = pymysql.connect(**db_config.db_config)
+                
+                # Verifichiamo se l'utente ha inserito un high_value 
+                service = query_service.QueryService()
+                high_value = service.handle_get_high_value_by_user(query_service.GetHighValueByUserQuery(request.email,conn))
+                
+                service = command_service.CommandService()
+                service.handle_update_low_value_by_user(command_service.UpdateLowValueByUserCommand(request.email, request.low_value, high_value,conn))
+                
+                response = usermanagement_pb2.UserResponse(success=True, message="low_value aggiornato con successo!")
+
+            except pymysql.MySQLError as err:
+                logger.error(f"Errore nel database, codice di errore: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database, codice di errore: {err}")
+            except ValueError as e:
+                response = usermanagement_pb2.UserResponse(success=False, message= str(e))
+
+            finally:
+                # Chiudiamo la connessione al database
+                conn.close()
+            
+                # Memorizzazione della risposta nella cache
+                save_into_cache(request_id, user_id, response)
+
+        # test per il timeout
+        #time.sleep(4)
+        return response
+
+
+    def UpdateHighValue(self, request, context):
+        logger.info("Funzione richiesta: UpdateHighValue")
+        user_id, request_id = extract_metadata(context)
+
+        result = handle_request_cache(request_id, user_id)
+        if result:
+            # test per il timeout
+            #time.sleep(1)
+            return result 
+        else:
+            try:
+                logger.info(f"Aggiornamento high_value utente: {request.email}, low_value: {request.high_value}")
+            
+                conn = pymysql.connect(**db_config.db_config)
+                
+                # Verifichiamo se l'utente ha inserito un low_value 
+                service = query_service.QueryService()
+                low_value = service.handle_get_low_value_by_user(query_service.GetLowValueByUserQuery(request.email,conn))
+                
+                service = command_service.CommandService()
+                service.handle_update_high_value_by_user(command_service.UpdateHighValueByUserCommand(request.email, request.high_value, low_value,conn))
+                
+                response = usermanagement_pb2.UserResponse(success=True, message="high_value aggiornato con successo!")
+
+            except pymysql.MySQLError as err:
+                logger.error(f"Errore nel database, codice di errore: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database, codice di errore: {err}")
+                
+            except ValueError as e:
+                response = usermanagement_pb2.UserResponse(success=False, message= str(e))
+
+            finally:
+                # Chiudiamo la connessione al database
+                conn.close()
+            
+                # Memorizzazione della risposta nella cache
+                save_into_cache(request_id, user_id, response)
+
+        # test per il timeout
+        #time.sleep(4)
+        return response
+
+
+    def ShowDetails(self, request, context):
+        logger.info("Funzione richiesta: ShowDetails")
+        user_id, request_id = extract_metadata(context)
+
+        result = handle_request_cache(request_id, user_id)
+        if result:
+            # test per il timeout
+            #time.sleep(1)
+            return result 
+        else:
+            try:
+                
+            
+                conn = pymysql.connect(**db_config.db_config)
+                
+                service = query_service.QueryService()
+                ticker,low_value,high_value = service.handle_get_user_details(query_service.GetUserDetailsQuery(request.email,conn))
+            
+                response = usermanagement_pb2.DetailsResponse(success=True, ticker = ticker, low_value = low_value, high_value = high_value)
+
+            except pymysql.MySQLError as err:
+                logger.error(f"Errore nel database, codice di errore: {err}")
+                response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database, codice di errore: {err}")
+                
+            except ValueError as e:
+                response = usermanagement_pb2.UserResponse(success=False, message= str(e))
+
+            finally:
+                # Chiudiamo la connessione al database
+                conn.close()
+            
+                # Memorizzazione della risposta nella cache
+                save_into_cache(request_id, user_id, response)
+
+        # test per il timeout
+        #time.sleep(4)
+        return response
+
+
+
 def initialize():
     try:
         populate_db()

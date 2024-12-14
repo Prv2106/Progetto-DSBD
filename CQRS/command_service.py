@@ -28,6 +28,11 @@ class RegisterUserCommand:
             logger.error("Email non valida")
             raise ValueError("Email non valida")
         
+        
+        if (low_value > 0 and high_value > 0) and low_value >= high_value:
+            logger.error("Soglie inserite non valide (high_value deve essere > di low_value)")
+            raise ValueError("Soglie inserite non valide (high_value deve essere > di low_value)")
+        
         self.register_user_command = """
         INSERT INTO Users (email, pwd, ticker, low_value, high_value)
         VALUES (%s, %s, %s, %s, %s);
@@ -103,7 +108,7 @@ class InsertTickerCommand:
 
 
 # Command per la rimozione dell'entry più vecchia per un dato ticker
-class DeleteOldEntryByTicker:
+class DeleteOldEntryByTickerCommand:
     def _init__(self,ticker,conn):
         self.delete_old_entry_by_ticker_command = """
             DELETE FROM Data
@@ -122,7 +127,49 @@ class DeleteOldEntryByTicker:
         self.conn = conn
 
 
-
+class UpdateLowValueByUserCommand:
+    def __init__(self,email, low_value, high_value ,conn):
+        
+        if (high_value <= low_value) and high_value > 0:
+            logger.error("Soglia inserita non valida (high_value deve essere > di low_value)")
+            raise ValueError("Soglia inserita non valida (high_value deve essere > di low_value)")
+        if low_value == -1:
+            logger.info("Soglia resettata")
+        elif low_value < 0:
+            logger.error("Hai inserito una soglia negativa, pertanto non sarà considerata")
+            raise ValueError("Hai inserito una soglia negativa, pertanto non sarà considerata")
+        
+               
+        self.update_low_value_command= """
+            UPDATE Users
+            SET low_value = %s
+            WHERE email = %s;
+        """
+        self.email = email
+        self.low_value = low_value
+        self.conn = conn
+        
+class UpdateHighValueByUserCommand:
+    
+    def __init__(self,email, high_value, low_value,conn):
+        
+        if (high_value <= low_value) and low_value > 0:
+            logger.error("Soglia inserita non valida (high_value deve essere > di low_value)")
+            raise ValueError("Soglia inserita non valida (high_value deve essere > di low_value)")
+        if low_value == -1:
+            logger.info("Soglia resettata")
+        elif low_value < 0:
+            logger.error("Hai inserito una soglia negativa, pertanto non sarà considerata")
+            raise ValueError("Hai inserito una soglia negativa, pertanto non sarà considerata")
+        
+        self.update_high_value_command= """
+            UPDATE Users
+            SET high_value = %s
+            WHERE email = %s;
+        """
+        self.email = email
+        self.high_value = high_value
+        self.conn = conn
     
  
 
@@ -161,8 +208,17 @@ class CommandService:
 
 
 
-    def handle_delete_old_entries_by_ticker(self, command: DeleteOldEntryByTicker):
+    def handle_delete_old_entries_by_ticker(self, command: DeleteOldEntryByTickerCommand):
         with command.conn.cursor() as cursor:
             cursor.execute(command.delete_old_entry_by_ticker_command, (command.ticker,))
             command.conn.commit()
 
+    def handle_update_low_value_by_user(self, command: UpdateLowValueByUserCommand):
+        with command.conn.cursor() as cursor:
+            cursor.execute(command.update_low_value_command, (command.low_value, command.email,))
+            command.conn.commit()
+            
+    def handle_update_high_value_by_user(self, command: UpdateHighValueByUserCommand):
+        with command.conn.cursor() as cursor:
+            cursor.execute(command.update_high_value_command, (command.high_value, command.email,))
+            command.conn.commit()

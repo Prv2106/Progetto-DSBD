@@ -10,12 +10,13 @@ service UserService {
     rpc LoginUser (UserLoginRequest) returns (UserResponse);
 
     // aggiornamento delle soglie
-    rpc UpdateHighThreshold (LowThresholdRequest) returns (UserResponse);
-    rpc UpdateLowThreshold (HighThresholdRequest) returns (UserResponse);
+    rpc UpdateHighValue (HighThresholdRequest) returns (UserResponse);
+    rpc UpdateLowValue (LowThresholdRequest) returns (UserResponse);
     
     // Metodi per il recupero dei dati
     rpc GetLatestValue (UserIdentifier) returns (StockValueResponse);
     rpc GetAverageValue (AverageRequest) returns (AverageResponse);
+    rpc ShowDetails(UserIdentifier) returns (DetailsResponse);
 }
 
 
@@ -77,4 +78,12 @@ message AverageResponse {
     string message = 2;
     string ticker = 3;
     float average = 4;
+}
+
+message DetailsResponse{
+    bool success = 1;
+    string ticker = 2;
+    float low_value = 3;
+    float high_value = 4;
+    string message = 5;
 }
