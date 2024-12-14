@@ -9,5 +9,6 @@ RUN pip install confluent_kafka
 
 COPY DB/db_config.py /app/
 COPY AlertSystem/alert_system.py /app/
+COPY CQRS/query_service.py .
 
 CMD [ "python", "alert_system.py"]

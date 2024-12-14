@@ -54,14 +54,14 @@ class UserServiceStub(object):
                 request_serializer=usermanagement__pb2.UserLoginRequest.SerializeToString,
                 response_deserializer=usermanagement__pb2.UserResponse.FromString,
                 _registered_method=True)
-        self.UpdateHighThreshold = channel.unary_unary(
-                '/usermanagement.UserService/UpdateHighThreshold',
-                request_serializer=usermanagement__pb2.LowThresholdRequest.SerializeToString,
+        self.UpdateHighValue = channel.unary_unary(
+                '/usermanagement.UserService/UpdateHighValue',
+                request_serializer=usermanagement__pb2.HighThresholdRequest.SerializeToString,
                 response_deserializer=usermanagement__pb2.UserResponse.FromString,
                 _registered_method=True)
-        self.UpdateLowThreshold = channel.unary_unary(
-                '/usermanagement.UserService/UpdateLowThreshold',
-                request_serializer=usermanagement__pb2.HighThresholdRequest.SerializeToString,
+        self.UpdateLowValue = channel.unary_unary(
+                '/usermanagement.UserService/UpdateLowValue',
+                request_serializer=usermanagement__pb2.LowThresholdRequest.SerializeToString,
                 response_deserializer=usermanagement__pb2.UserResponse.FromString,
                 _registered_method=True)
         self.GetLatestValue = channel.unary_unary(
@@ -73,6 +73,11 @@ class UserServiceStub(object):
                 '/usermanagement.UserService/GetAverageValue',
                 request_serializer=usermanagement__pb2.AverageRequest.SerializeToString,
                 response_deserializer=usermanagement__pb2.AverageResponse.FromString,
+                _registered_method=True)
+        self.ShowDetails = channel.unary_unary(
+                '/usermanagement.UserService/ShowDetails',
+                request_serializer=usermanagement__pb2.UserIdentifier.SerializeToString,
+                response_deserializer=usermanagement__pb2.DetailsResponse.FromString,
                 _registered_method=True)
 
 
@@ -104,14 +109,14 @@ class UserServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def UpdateHighThreshold(self, request, context):
+    def UpdateHighValue(self, request, context):
         """aggiornamento delle soglie
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def UpdateLowThreshold(self, request, context):
+    def UpdateLowValue(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -125,6 +130,12 @@ class UserServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def GetAverageValue(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ShowDetails(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -153,14 +164,14 @@ def add_UserServiceServicer_to_server(servicer, server):
                     request_deserializer=usermanagement__pb2.UserLoginRequest.FromString,
                     response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
             ),
-            'UpdateHighThreshold': grpc.unary_unary_rpc_method_handler(
-                    servicer.UpdateHighThreshold,
-                    request_deserializer=usermanagement__pb2.LowThresholdRequest.FromString,
+            'UpdateHighValue': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateHighValue,
+                    request_deserializer=usermanagement__pb2.HighThresholdRequest.FromString,
                     response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
             ),
-            'UpdateLowThreshold': grpc.unary_unary_rpc_method_handler(
-                    servicer.UpdateLowThreshold,
-                    request_deserializer=usermanagement__pb2.HighThresholdRequest.FromString,
+            'UpdateLowValue': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateLowValue,
+                    request_deserializer=usermanagement__pb2.LowThresholdRequest.FromString,
                     response_serializer=usermanagement__pb2.UserResponse.SerializeToString,
             ),
             'GetLatestValue': grpc.unary_unary_rpc_method_handler(
@@ -172,6 +183,11 @@ def add_UserServiceServicer_to_server(servicer, server):
                     servicer.GetAverageValue,
                     request_deserializer=usermanagement__pb2.AverageRequest.FromString,
                     response_serializer=usermanagement__pb2.AverageResponse.SerializeToString,
+            ),
+            'ShowDetails': grpc.unary_unary_rpc_method_handler(
+                    servicer.ShowDetails,
+                    request_deserializer=usermanagement__pb2.UserIdentifier.FromString,
+                    response_serializer=usermanagement__pb2.DetailsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -293,7 +309,7 @@ class UserService(object):
             _registered_method=True)
 
     @staticmethod
-    def UpdateHighThreshold(request,
+    def UpdateHighValue(request,
             target,
             options=(),
             channel_credentials=None,
@@ -306,8 +322,8 @@ class UserService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/usermanagement.UserService/UpdateHighThreshold',
-            usermanagement__pb2.LowThresholdRequest.SerializeToString,
+            '/usermanagement.UserService/UpdateHighValue',
+            usermanagement__pb2.HighThresholdRequest.SerializeToString,
             usermanagement__pb2.UserResponse.FromString,
             options,
             channel_credentials,
@@ -320,7 +336,7 @@ class UserService(object):
             _registered_method=True)
 
     @staticmethod
-    def UpdateLowThreshold(request,
+    def UpdateLowValue(request,
             target,
             options=(),
             channel_credentials=None,
@@ -333,8 +349,8 @@ class UserService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/usermanagement.UserService/UpdateLowThreshold',
-            usermanagement__pb2.HighThresholdRequest.SerializeToString,
+            '/usermanagement.UserService/UpdateLowValue',
+            usermanagement__pb2.LowThresholdRequest.SerializeToString,
             usermanagement__pb2.UserResponse.FromString,
             options,
             channel_credentials,
@@ -390,6 +406,33 @@ class UserService(object):
             '/usermanagement.UserService/GetAverageValue',
             usermanagement__pb2.AverageRequest.SerializeToString,
             usermanagement__pb2.AverageResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ShowDetails(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/usermanagement.UserService/ShowDetails',
+            usermanagement__pb2.UserIdentifier.SerializeToString,
+            usermanagement__pb2.DetailsResponse.FromString,
             options,
             channel_credentials,
             insecure,

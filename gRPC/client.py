@@ -51,6 +51,13 @@ def register_user(stub, channel):
             break
         print("digitare s o n")
 
+    if low_value < -1:
+        print("Hai inserito una soglia low_value negativa, di conseguenza la soglia non verrà considerata")
+        low_value = -1
+        
+    if high_value < -1:
+        print("Hai inserito una soglia high_lavue negativa, di conseguenza la soglia non verrà considerata")
+        high_value = -1
 
 
     print(f"Metadati che verranno passati al server: {metadata}")
@@ -289,6 +296,114 @@ def calculate_average(stub, channel):
 
 
 
+
+def low_value_update(stub, channel):
+    # anche questa può essere chiamata solo dopo che l'utente si sarà loggato..
+
+    # metadati 
+    metadata = [
+        ('user_id', email),
+        ('request_id', str(uuid.uuid4())) 
+    ]
+    print("Inserisci -1 se intendi rimuovere una soglia esistente, inserisci una soglia negativa diversa da -1 se non vuoi più aggiornare la soglia")
+    low_value = float(input("Inserisci soglia minima: "))
+    request = usermanagement_pb2.LowThresholdRequest(email = email, low_value = low_value)
+
+    for attempt in range(max_attempts):
+        try:
+            response = stub.UpdateLowValue(request, timeout = 2 , metadata = metadata)
+            print(f"\nEsito: {response.success}, Messaggio: {response.message}")
+            return
+        
+        except grpc.RpcError as err:
+            if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                print("\n############################################################")
+                print(f"Timeout superato, tentativo {attempt + 1} di {max_attempts}")
+                print("############################################################")
+                continue 
+            
+            elif err.code() == grpc.StatusCode.UNAVAILABLE:
+                print("Errore: server non disponibile")
+                wait_for_server(channel)
+                continue
+            else:
+                print(f"Errore: {err}")
+                break
+
+    print("Non è stato possibile completare la richiesta")
+    
+def high_value_update(stub, channel):
+    # anche questa può essere chiamata solo dopo che l'utente si sarà loggato..
+
+    # metadati 
+    metadata = [
+        ('user_id', email),
+        ('request_id', str(uuid.uuid4())) 
+    ]
+    
+    print("Inserisci -1 se intendi rimuovere una soglia esistente, inserisci una soglia negativa diversa da -1 se non vuoi più aggiornare la soglia")
+    high_value = float(input("Inserisci soglia massima: "))
+    request = usermanagement_pb2.HighThresholdRequest(email = email, high_value = high_value)
+
+    for attempt in range(max_attempts):
+        try:
+            response = stub.UpdateHighValue(request, timeout = 2 , metadata = metadata)
+            print(f"\nEsito: {response.success}, Messaggio: {response.message}")
+            return
+        
+        except grpc.RpcError as err:
+            if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                print("\n############################################################")
+                print(f"Timeout superato, tentativo {attempt + 1} di {max_attempts}")
+                print("############################################################")
+                continue 
+            
+            elif err.code() == grpc.StatusCode.UNAVAILABLE:
+                print("Errore: server non disponibile")
+                wait_for_server(channel)
+                continue
+            else:
+                print(f"Errore: {err}")
+                break
+
+    print("Non è stato possibile completare la richiesta")
+
+def show_details(stub,channel):
+    # anche questa può essere chiamata solo dopo che l'utente si sarà loggato..
+
+    # metadati 
+    metadata = [
+        ('user_id', email),
+        ('request_id', str(uuid.uuid4())) 
+    ]
+    
+   
+    request = usermanagement_pb2.UserIdentifier(email = email)
+
+    for attempt in range(max_attempts):
+        try:
+            response = stub.ShowDetails(request, timeout = 2 , metadata = metadata)
+            print(f"\nDettagli account (-1 se la soglia non è definita):\nTicker = {response.ticker}, low_value = {response.low_value}, high_value = {response.high_value}")
+            return
+        
+        except grpc.RpcError as err:
+            if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                print("\n############################################################")
+                print(f"Timeout superato, tentativo {attempt + 1} di {max_attempts}")
+                print("############################################################")
+                continue 
+            
+            elif err.code() == grpc.StatusCode.UNAVAILABLE:
+                print("Errore: server non disponibile")
+                wait_for_server(channel)
+                continue
+            else:
+                print(f"Errore: {err}")
+                break
+
+    print("Non è stato possibile completare la richiesta")
+
+
 #############################################################################
 
 def initial_menu():
@@ -304,6 +419,9 @@ def logged_menu():
     print("2. Cancella account")
     print("3. Recupero ultimo valore disponibile della mia azione")
     print("4. Calcolo della media degli ultimi valori")
+    print("5. Aggiorna soglia minima ")
+    print("6. Aggiorna soglia massima")    
+    print("7. Mostra i miei dati")    
     print("0. Logout")
 
 
@@ -346,34 +464,46 @@ def run():
         stub = usermanagement_pb2_grpc.UserServiceStub(channel)
 
         while True:
-            # Mostra il menu e ottiene la scelta dell'utente
-            if len(email) == 0:
-                initial_menu()
-                choice = input("Scegli un'opzione: ")
-                if choice == "1":
-                    register_user(stub,channel)
-                elif choice == "2":
-                    login_user(stub,channel)
-                elif choice == "0":
-                    print("Uscita...")
-                    break
+            try:
+                # Mostra il menu e ottiene la scelta dell'utente
+                if len(email) == 0:
+                    initial_menu()
+                    choice = input("Scegli un'opzione: ")
+                    if choice == "1":
+                        register_user(stub,channel)
+                    elif choice == "2":
+                        login_user(stub,channel)
+                    elif choice == "0":
+                        print("Uscita...")
+                        break
+                    else:
+                        print("Opzione non valida, riprova.")
                 else:
-                    print("Opzione non valida, riprova.")
-            else:
-                logged_menu()
-                choice = input("Scegli un'opzione: ")
-                if choice == "1":
-                    update_user(stub,channel)
-                elif choice == '2':
-                    delete_user(stub,channel)
-                elif choice == "3":
-                    get_last_value(stub,channel)
-                elif choice == '4':
-                    calculate_average(stub,channel)
-                elif choice == "0":
-                    email = ''
-                else:
-                    print("Opzione non valida, riprova.")
+                    logged_menu()
+                    choice = input("Scegli un'opzione: ")
+                    if choice == "1":
+                        update_user(stub,channel)
+                    elif choice == '2':
+                        delete_user(stub,channel)
+                    elif choice == "3":
+                        get_last_value(stub,channel)
+                    elif choice == '4':
+                        calculate_average(stub,channel)
+                    elif choice == '5':
+                        low_value_update(stub,channel)
+                    elif choice == '6':
+                        high_value_update(stub,channel)
+                    elif choice == '7':
+                        show_details(stub,channel)
+                        
+                    elif choice == "0":
+                        email = ''
+                    else:
+                        print("Opzione non valida, riprova.")
+            except KeyboardInterrupt:
+                # Shutdown on user interruption (Ctrl+C)
+                print("\nChiusura client...")
+                break
 
 
 if __name__ == '__main__':

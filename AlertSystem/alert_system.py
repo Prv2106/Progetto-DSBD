@@ -3,7 +3,7 @@ import pymysql
 import json
 import logging
 import db_config
-
+import query_service
 
 # Configurazione del logger
 logging.basicConfig(level=logging.INFO)
@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
     nel topic  Kafka  "to-alert-system" (kafka consumer), scandisce il database e, 
     per ogni profilo in cui il valore del ticker è o maggiore di  high-value o minore 
     di low-value (se dati), invia un messaggio  (kafka producer)  sul topic Kafka 
-    "to-notifier"  contenente i parametri 
-                                    <email, ticker,  condizione di superamento soglia>.
+    "to-notifier"  contenente i parametri <email, ticker,  condizione di superamento soglia>.
 """
 
 # configurazione indirizzo del broker (sfruttando il DNS di docker)
@@ -95,21 +94,11 @@ def scan_database_and_notify():
     """
     try:
         conn = pymysql.connect(**db_config.db_config)
-        with conn.cursor() as cursor:
-            # Query per trovare profili che superano le soglie
-            query = """
-            SELECT DISTINCT u.email, u.ticker, d.valore_euro, u.low_value, u.high_value
-            FROM Users u
-            JOIN Data d ON u.ticker = d.ticker
-            WHERE 
-                (u.low_value IS NOT NULL AND d.valore_euro < u.low_value AND u.low_value > 0)
-                OR 
-                (u.high_value IS NOT NULL AND d.valore_euro > u.high_value AND u.high_value > 0);
-            """
-            cursor.execute(query)
-            results = cursor.fetchall()
-            
-            for email, ticker, value, low, high in results:
+        
+        service = query_service.QueryService()
+        results = service.handle_get_distinct_users_values(query_service.GetDistinctUsersValuesQuery(conn))
+        
+        for email, ticker, value, low, _ in results:
                 message = {
                     "email": email,
                     "ticker": ticker,
@@ -120,6 +109,7 @@ def scan_database_and_notify():
                 producer.flush() 
                 print(f"Produced: {message}")
                 logger.info(f"Notifica inviata: {message}")
+        
 
     except pymysql.MySQLError as e:
         logger.error(f"Errore durante la scansione del database: {e}")
