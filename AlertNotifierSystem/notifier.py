@@ -1,8 +1,13 @@
 from confluent_kafka import Consumer
 import json
 import logging
+
 import smtplib
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
+import email_config
+
 
 # Configurazione del logger
 logging.basicConfig(level=logging.INFO)
@@ -33,10 +38,6 @@ in_topic = 'to-notifier'
 
 consumer.subscribe([in_topic]) 
 
-# server SMTP Postfix
-smtp_host = 'postfix-container'  
-smtp_port = 587   # Porta SMTP per invio 
-
 
 def poll_loop():
     logger.info("In attesa di messaggi dal topic 'to-notifier'...")
@@ -50,16 +51,17 @@ def poll_loop():
                 print(f"Consumer error: {msg.error()}")  
                 continue
             
+            
             # Parsing del messaggio ricevuto
             data = json.loads(msg.value().decode('utf-8'))
             email = data['email']
             ticker = data['ticker']
             condition = data['condition']
-            logger.info(f"Messaggio ricevuto: email={email}, ticker={ticker}, condition={condition}")
+            logger.info(f"Notifier: messaggio ricevuto: email={email}, ticker={ticker}, condition={condition}")
 
             # Invio dell'email
             subject = f"Ticker: {ticker}"
-            body = f" {condition}!"
+            body = f"{condition}!"
             send_email(email, subject, body)
 
     except json.JSONDecodeError as e:
@@ -73,19 +75,23 @@ def poll_loop():
     finally:
         consumer.close()
            
-           
 
 def send_email(to_email, subject, body):
     try:
-        # Crea il messaggio
-        msg = MIMEText(body)
-        msg['From'] = 'no-reply@provaprova0.com'
+        # Creazione del messaggio
+        msg = MIMEMultipart()
+        msg['From'] = email_config.email
         msg['To'] = to_email
         msg['Subject'] = subject
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.starttls()  # Usa TLS per la sicurezza
-            server.sendmail('no-reply@provaprova1.com', to_email, msg.as_string())  # Invio dell'email
-            print(f"Email inviata con successo a {to_email}")
+        msg.attach(MIMEText(body, 'plain'))
+
+        logger.info(f"Connessione al server SMTP in corso...")
+        with smtplib.SMTP(email_config.smtp_host, 587) as server:
+            server.set_debuglevel(1)  # Mostra log dettagliati
+            server.starttls()
+            server.login(email_config.email, email_config.password)
+            server.sendmail(email_config.email, to_email, msg.as_string())  # Invio dell'email
+            logger.info(f"Notifier: email inviata con successo a {to_email}")
     except Exception as e:
         print(f"Errore durante l'invio dell'email: {e}")
             

@@ -89,22 +89,7 @@ services:
       - net2
     container_name: alert_notifier_container
     restart: always
-
-  # server SMTP per invio delle e-mail
-  postfix:
-    build:
-      context: ./SMTP
-      dockerfile: dockerfile-postfix
-    container_name: postfix-container
-    ports:
-      - "587:587" 
-    environment:
-      - MAILNAME=yahoo-finance.com  # Nome del dominio del server
-    depends_on:
-      - alert-notifier-system
-    networks:
-      - net2
-
+    
 
 networks:
   net1:

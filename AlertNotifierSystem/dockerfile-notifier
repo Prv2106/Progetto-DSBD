@@ -8,6 +8,7 @@ RUN pip install cryptography
 RUN pip install confluent_kafka
 
 COPY notifier.py .
+COPY email_config.py .
 
 
 CMD [ "python", "notifier.py"]
