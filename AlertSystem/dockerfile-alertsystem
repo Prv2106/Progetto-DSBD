@@ -6,6 +6,7 @@ RUN pip install pymysql
 RUN pip install bcrypt pymysql
 RUN pip install cryptography
 RUN pip install confluent_kafka
+RUN pip install pytz
 
 COPY DB/db_config.py /app/
 COPY AlertSystem/alert_system.py /app/
