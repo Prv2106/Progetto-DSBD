@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 """
-    il componente AlertSystem è un servizio indipendente che, alla ricezione di messaggio 
+    il componente AlertSystem è un servizio indipendente che, alla ricezione di un messaggio 
     nel topic  Kafka  "to-alert-system" (kafka consumer), scandisce il database e, 
-    per ogni profilo in cui il valore del ticker è o maggiore di  high-value o minore 
+    per ogni profilo in cui il valore del ticker è o maggiore di high-value o minore 
     di low-value (se dati), invia un messaggio  (kafka producer)  sul topic Kafka 
     "to-notifier"  contenente i parametri <email, ticker,  condizione di superamento soglia>.
 """
@@ -55,7 +55,7 @@ def poll_loop():
     try:
         while True:
             # Poll for new messages from "in_topic"
-            msg = consumer.poll(1.0)
+            msg = consumer.poll(1.0) # 1 secondo è il tempo che il consumer attende
             if msg is None:
                 continue  # No message received, continue polling
             if msg.error():
