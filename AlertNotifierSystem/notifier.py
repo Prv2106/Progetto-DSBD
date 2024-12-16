@@ -26,7 +26,7 @@ kafka_broker = "kafka_container:9092"
 consumer_config = {
     'bootstrap.servers': kafka_broker,  # Indirizzo del broker Kafka
     'group.id': 'group1',  
-    'auto.offset.reset': 'latest',  # Se il consumer non ha un offset salvato legge solo i nuovi messaggi (non quelli vecchi)
+    'auto.offset.reset': 'latest',  
     'enable.auto.commit': False  # Disabilita l'auto-commit degli offset
 }
 
@@ -43,8 +43,6 @@ def poll_loop():
     Funzione principale che ascolta i messaggi dal topic Kafka.
     Dopo aver elaborato correttamente ogni messaggio, il commit dell'offset viene eseguito manualmente.
     """
-    logger.info("Preparazione del notifier...")
-    time.sleep(10) # Diamo il tempo a kafka di mettere su la connessione
 
     logger.info("In attesa di messaggi dal topic 'to-notifier'...")
     try:
@@ -72,6 +70,7 @@ def poll_loop():
                 ticker = data['ticker']
                 condition = data['condition']
                 logger.info(f"Notifier: messaggio ricevuto: email={email}, ticker={ticker}, condition={condition}")
+                logger.info(f"Dettagli messaggio: topic:{msg.topic()}, partizione:{msg.partition()}, offset:{msg.offset()}") 
 
                 # Creazione del contenuto dell'email
                 subject = f"Ticker: {ticker}"
@@ -83,7 +82,7 @@ def poll_loop():
                 # Commit manuale dell'offset dopo elaborazione riuscita
                 # asynchronous=False significa che il consumer aspetta che Kafka confermi che il commit dell'offset è stato completato prima di proseguire con l'elaborazione del prossimo messaggio
                 consumer.commit(asynchronous=False)
-                logger.info("Offset committato manualmente dopo elaborazione del messaggio.")
+                logger.info(f"Offset committato manualmente dopo elaborazione del messaggio (offset -> {msg.offset})")
 
             except json.JSONDecodeError as e:
                 # Errore di parsing JSON
@@ -128,5 +127,17 @@ def send_email(to_email, subject, body):
 
 
 if __name__ == "__main__":
+    
+    while True:
+        logger.info(f"Tentativo di iscrizione al topic {in_topic}...")
+        time.sleep(2)
+        try:
+            consumer.subscribe([in_topic])
+            logger.info("Iscrizione avvenuta con successo")
+            break
+        except Exception as e:
+            logger.error(f"Tentativo di iscrizione al topic fallito... Riprovo.")
+    
+    
     # Avvio del loop principale di ascolto dei messaggi
     poll_loop()

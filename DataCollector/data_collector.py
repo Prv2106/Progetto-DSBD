@@ -100,7 +100,7 @@ def data_collector():
         
         if request_count > 300:
             time.sleep(3600) # aggiorna ogni ora
-        elif request_count < 5:
+        elif request_count <= 5: 
             time.sleep(5)
         else:
             time.sleep(120) # aggiorna ogni 2 min
@@ -180,7 +180,8 @@ def data_collector():
                 ##### è qui che dobbiamo notificare al nuovo componente di aver finito
                 producer.produce(out_topic, json.dumps(f"database aggiornato: {datetime.now(tz)}"))
                 producer.flush()  
-        
+                logger.info("data_collector: Messaggio prodotto")
+                
         except pymysql.MySQLError as e:
             # Gestione degli errori durante la connessione al database
             logger.error(f"data_collector: Tentativo di connessione al database fallito, codice di errore: {e}")

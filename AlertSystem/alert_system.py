@@ -50,16 +50,12 @@ producer = Producer(producer_config)
 in_topic = 'to-alert-system'  
 out_topic = 'to-notifier'  
 
-consumer.subscribe([in_topic])
-
 def poll_loop():
-    logger.info("Preparazione del notifier...")
-    time.sleep(10) # Diamo il tempo a kafka di mettere su la connessione
     logger.info("In attesa di messaggi dal topic 'to-alert-system'...")  
     try:
         while True:
             # Poll per nuovi messaggi dal topic "in_topic"
-            msg = consumer.poll(1.0)  # Aspetta fino a 1 secondo per un nuovo messaggio
+            msg = consumer.poll(3.0)  
             if msg is None:
                 continue  # Se nessun messaggio è stato ricevuto, continua a fare polling
             if msg.error():
@@ -73,13 +69,13 @@ def poll_loop():
                 nel database da parte del DataCollector)
             """
             logger.info(f"Messaggio recuperato: {json.loads(msg.value().decode('utf-8'))}") 
-           
+            logger.info(f"Dettagli messaggio: topic:{msg.topic()}, partizione:{msg.partition()}, offset:{msg.offset()}") 
     
             scan_database_and_notify()  # Questa funzione si occupa anche della produzione
 
             # Commit manuale dell'offset dopo che il messaggio è stato elaborato correttamente
             consumer.commit(asynchronous=False)  
-            logger.info(f"Offset committato manualmente.") 
+            logger.info(f"Offset committato manualmente. topic:{msg.topic()}, partizione:{msg.partition()}, offset:{msg.offset()}") 
 
     except KeyboardInterrupt:
         # Interruzione del programma con Ctrl+C
@@ -92,10 +88,10 @@ def poll_loop():
 def delivery_report(err, msg):
     """Callback per riportare il risultato della consegna del messaggio."""
     if err:
-        print(f"Delivery failed: {err}")  # Se la consegna fallisce, stampa l'errore
+        logger.error(f"Delivery failed: {err}")  # Se la consegna fallisce, stampa l'errore
     else:
         # Se il messaggio viene consegnato con successo, stampa dove è stato inviato
-        print(f"Callback delivery_report: Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
+        logger.info(f"Callback delivery_report: Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
 
 
 def scan_database_and_notify():
@@ -107,7 +103,7 @@ def scan_database_and_notify():
         
         service = query_service.QueryService()# Recupera i risultati delle query di selezione distinti per utenti
         results = service.handle_get_distinct_users_values(query_service.GetDistinctUsersValuesQuery(conn))
-        
+        logger.info(f"\nRESULTS:\n {results}")
         # Elabora i risultati e invia notifiche per ogni profilo
         for email, ticker, value, low, high in results:
                 message = {
@@ -132,4 +128,15 @@ def scan_database_and_notify():
         conn.close()  
 
 if __name__ == "__main__":
+    
+    while True:
+        logger.info(f"Tentativo di iscrizione al topic {in_topic}...")
+        time.sleep(2)
+        try:
+            consumer.subscribe([in_topic])
+            logger.info("Iscrizione avvenuta con successo")
+            break
+        except Exception as e:
+            logger.error("Tentativo di iscrizione al topic fallito... Riprovo.")
+    
     poll_loop()  # Avvia il ciclo di polling per ricevere messaggi

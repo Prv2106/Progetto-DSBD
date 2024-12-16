@@ -45,6 +45,8 @@ services:
     networks:
       - net2
     restart: always
+    volumes:
+    - zookeeper_data:/var/lib/zookeeper
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -68,7 +70,7 @@ services:
     restart: always
     volumes:
       - kafka_data:/var/lib/kafka/data
-
+    
   alert-system:
     build:
       context: .
@@ -102,4 +104,6 @@ volumes:
   db_vol:
     driver: local
   kafka_data:
+    driver: local
+  zookeeper_data:
     driver: local
