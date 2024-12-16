@@ -10,10 +10,9 @@ import command_service
 import db_config
 import json
 from confluent_kafka import Producer
-
+from create_topic import bootstrap_servers
 
 tz = pytz.timezone('Europe/Rome') 
-
 
 # Configurazione del logger
 logging.basicConfig(level=logging.INFO)
@@ -26,12 +25,9 @@ maximum_occurrences = 200 # numero max di entry nella tabella Data per ciascun t
 last_tickers = [] # lista dei ticker recuperati all'iterazione precedente
 
 
-
-kafka_broker = "kafka_container:9092"
-
 # configurazione produttore
 producer_config = {
-    'bootstrap.servers': kafka_broker,
+    'bootstrap.servers': bootstrap_servers,
     'acks': 1, 
     'linger.ms': 0, # tempo max (ms) che aspetta prima di inviare i messaggi accumulati nel buffer. Se 0, vengono inviati immediatamente.
     'compression.type': 'gzip',
@@ -100,8 +96,6 @@ def data_collector():
         
         if request_count > 300:
             time.sleep(3600) # aggiorna ogni ora
-        elif request_count < 5:
-            time.sleep(5)
         else:
             time.sleep(120) # aggiorna ogni 2 min
         logger.info(f">>>>>>>>>>>>>>>>>>>>>>>>> Ciclo {request_count + 1}:")
