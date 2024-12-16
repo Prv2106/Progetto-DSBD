@@ -126,7 +126,7 @@ class DeleteOldEntryByTickerCommand:
         self.ticker = ticker
         self.conn = conn
 
-
+# Command per l'aggiornamento del low_value di un utente
 class UpdateLowValueByUserCommand:
     def __init__(self,email, low_value, high_value ,conn):
         
@@ -148,7 +148,9 @@ class UpdateLowValueByUserCommand:
         self.email = email
         self.low_value = low_value
         self.conn = conn
-        
+      
+      
+# Command per l'aggiornamento del high_value di un utente        
 class UpdateHighValueByUserCommand:
     
     def __init__(self,email, high_value, low_value,conn):

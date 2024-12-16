@@ -97,10 +97,13 @@ def data_collector():
     request_count = 0 # contatore per gestire la velocità delle richieste
 
     while True:
+        
         if request_count > 300:
             time.sleep(3600) # aggiorna ogni ora
+        elif request_count < 5:
+            time.sleep(5)
         else:
-            time.sleep(60)
+            time.sleep(120) # aggiorna ogni 2 min
         logger.info(f">>>>>>>>>>>>>>>>>>>>>>>>> Ciclo {request_count + 1}:")
         
         request_count += 1
