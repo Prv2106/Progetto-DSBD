@@ -1,12 +1,11 @@
 from confluent_kafka.admin import AdminClient
 from confluent_kafka import KafkaException
-import time 
 import create_topic as ct
 
 
 def get_metadata():
-    admin_client = AdminClient({'bootstrap.servers': ','.join(ct.bootstrap_servers)})
     try:
+        admin_client = AdminClient(ct.conf)
         metadata = admin_client.list_topics(timeout=10)
         
         print("\nBrokers:")
@@ -33,9 +32,8 @@ def get_metadata():
 
 
 if __name__ == "__main__":
-    time.sleep(10)
     print("Creazione dei topic (se non esistenti...)\n")
-    ct.create_topic_if_not_exists(ct.topic_list, ct.num_partitions, ct.replication_factor)
+    ct.create_topic_if_not_exists(ct.topics_to_create, ct.num_partitions, ct.replication_factor)
     print("Stampa dei dettagli dei topic...")
     ct.list_topics_and_details()
 

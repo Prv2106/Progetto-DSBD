@@ -12,6 +12,7 @@ import json
 from confluent_kafka import Producer
 from create_topic import bootstrap_servers
 
+
 tz = pytz.timezone('Europe/Rome') 
 
 # Configurazione del logger
