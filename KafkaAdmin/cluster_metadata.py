@@ -74,5 +74,5 @@ if __name__ == "__main__":
         exit(1)
 
     while True:
-        time.sleep(10)
+        time.sleep(120)
         get_metadata()

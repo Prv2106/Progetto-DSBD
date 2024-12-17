@@ -1,4 +1,3 @@
-import pymysql
 import logging
 import re
 
@@ -8,11 +7,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-
 # Command per la registrazione dell'utente
 class RegisterUserCommand:
     def __init__(self, email, hashed_pwd, ticker, low_value, high_value, conn):
-         # verifica che la password non sia vuota
+        # verifica che la password non sia vuota
         if not hashed_pwd:
             logger.error("password non inserita")
             raise ValueError("password non inserita")
@@ -21,7 +19,6 @@ class RegisterUserCommand:
         if not ticker:
                 logger.error("ticker non inserito")
                 raise ValueError("ticker non inserito")
-        
         
         # Validazione dell'email
         if not self.validate_email(email):
@@ -43,8 +40,6 @@ class RegisterUserCommand:
         self.low_value = low_value
         self.high_value = high_value
         self.conn = conn
-
-
 
 
     @staticmethod
@@ -125,6 +120,7 @@ class DeleteOldEntryByTickerCommand:
         
         self.ticker = ticker
         self.conn = conn
+
 
 # Command per l'aggiornamento del low_value di un utente
 class UpdateLowValueByUserCommand:

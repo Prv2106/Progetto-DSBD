@@ -14,7 +14,6 @@ num_partitions = 1
 replication_factor = 3  
 
 def list_topics_and_details():
-    """ Stampa a video la lista dei topic e dei dettagli """
     consumer = KafkaConsumer(bootstrap_servers=bootstrap_servers)
     topics = consumer.topics()  
     logger.info("\nDettagli dei topic disponibili:")

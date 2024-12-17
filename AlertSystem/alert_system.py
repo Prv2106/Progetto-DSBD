@@ -111,7 +111,9 @@ def scan_database_and_notify():
                 message = {
                     "email": email,  # Indirizzo email del destinatario
                     "ticker": ticker,  # Ticker del profilo
-                    "condition": f"Aggiornamento {datetime.now(tz)}:\nIl valore di {ticker} è sceso al di sotto della soglia da te indicata ({low})" if value < low else f"Aggiornamento {datetime.now(tz)}:\nIl valore di {ticker} è salito al di sopra della soglia da te indicata ({high}) " 
+                    "condition": f"Aggiornamento {datetime.now(tz)}:\nIl valore di {ticker} è sceso al di sotto della soglia da te indicata ({low})" if value < low else f"Aggiornamento {datetime.now(tz)}:\nIl valore di {ticker} è salito al di sopra della soglia da te indicata ({high})",
+                    "condition_placeholder": "higher" if value > high else "lower",
+                    "value": float(value)
                 }
                 # Log per tracciare l'invio del messaggio prima del flush
                 logger.info(f"Preparazione per inviare il messaggio: {message}")

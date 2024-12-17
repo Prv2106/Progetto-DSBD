@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
      --> body: condizione di superamento soglia (superiore o inferiore)
 """
 
-
 # Configurazione del consumer Kafka con commit manuale
 consumer_config = {
     'bootstrap.servers': ','.join(bootstrap_servers), 
@@ -30,9 +29,50 @@ consumer_config = {
     'enable.auto.commit': False  # Disabilita l'auto-commit degli offset
 }
 
-
 in_topic = 'to-notifier' 
 
+
+# dizionario di dizionari che serve per evitare di mandare due o più email con lo stesso valore
+# chiave: email utente; valore = dizionario contenente valore e condizione
+mail_cache = {} 
+"""
+E' qualcosa del tipo:
+{
+    'utente@example.come': {
+        'value': 10
+        'condition': 'higher'
+    }
+}
+"""
+
+def is_cache_outdated(email, value, condition_placeholder):
+    '''
+        Questa funzione fa un check sulla cache sulla base dei valori del ciclo corrente...
+        Se il valore del ticker e la condizione sono uguali a quelle memorizzate allora 
+        blocchiamo l'invio della mail (ritorniamo false), altrimenti,
+        ritorniamo true (così nel codice che la invoca continuiamo l'esecuzione).
+
+        N.B: facciamo il casting del valore del ticker in int per far si che le variazioni
+             decimali non siano considerati fluttuazioni degne di essere notificate.
+    '''
+    if mail_cache is not None and email in mail_cache:
+        old_value = int(mail_cache[email]['value'])  
+        old_condition = mail_cache[email]['condition']
+
+        logger.info(f"Confronto cache: email={email}, old_value={old_value}, new_value={int(value)}, "
+                    f"old_condition={old_condition}, new_condition={condition_placeholder}")
+
+        # Forza il tipo di value a float prima del confronto
+        if int(value) == old_value and condition_placeholder == old_condition:
+            return False  # non inviare l'email
+    return True  # inviare l'email
+         
+                    
+def save_into_cache(email, value, condition_placeholder):
+    if email not in mail_cache:  # se è la prima volta dobbiamo inizializzare
+        mail_cache[email] = {}
+    mail_cache[email]['value'] = int(value)
+    mail_cache[email]['condition'] = condition_placeholder
 
 
 def poll_loop():
@@ -61,20 +101,32 @@ def poll_loop():
                 email = data['email']
                 ticker = data['ticker']
                 condition = data['condition']
+
+                condition_placeholder = data['condition_placeholder'] 
+                value = data['value']
+
                 logger.info(f"Notifier: messaggio ricevuto: email={email}, ticker={ticker}, condition={condition}")
                 logger.info(f"Dettagli messaggio: topic:{msg.topic()}, partizione:{msg.partition()}, offset:{msg.offset()}") 
 
-                # Creazione del contenuto dell'email
-                subject = f"Ticker: {ticker}"
-                body = f"{condition}!"
+                # vediamo se possiamo procedere con l'invio della mail o questa è ridondante
+                ok = is_cache_outdated(email, value, condition_placeholder)
+                if ok:
+                    # Invio dell'email... creazione del contenuto dell'email
+                    subject = f"Ticker: {ticker}"
+                    body = f"{condition}!"
 
-                # Invio dell'email
-                send_email(email, subject, body)
+                    send_email(email, subject, body)
+
+                    # salvataggio in memoria dell'email per evitare email ridondanti
+                    save_into_cache(email, value, condition_placeholder)
+                else:
+                    logger.info(f"Notifier: l'email non è stata mandata perchè ridondante! email={email}, ticker={ticker}")
 
                 # Commit manuale dell'offset dopo elaborazione riuscita
                 # asynchronous=False significa che il consumer aspetta che Kafka confermi che il commit dell'offset è stato completato prima di proseguire con l'elaborazione del prossimo messaggio
                 consumer.commit(asynchronous=False)
                 logger.info(f"Offset committato manualmente dopo elaborazione del messaggio (offset -> {msg.offset})")
+
 
             except json.JSONDecodeError as e:
                 # Errore di parsing JSON
