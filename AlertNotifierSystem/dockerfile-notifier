@@ -6,9 +6,12 @@ RUN pip install pymysql
 RUN pip install bcrypt pymysql
 RUN pip install cryptography
 RUN pip install confluent_kafka
+RUN pip install kafka-python
 
-COPY notifier.py .
-COPY email_config.py .
+
+COPY AlertNotifierSystem/notifier.py .
+COPY AlertNotifierSystem/email_config.py .
+COPY KafkaAdmin/create_topic.py .
 
 
 CMD [ "python", "notifier.py"]

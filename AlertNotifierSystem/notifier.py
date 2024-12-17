@@ -6,6 +6,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import email_config
 import time
+from create_topic import bootstrap_servers
+
 
 # Configurazione del logger
 logging.basicConfig(level=logging.INFO)
@@ -19,12 +21,10 @@ logger = logging.getLogger(__name__)
      --> body: condizione di superamento soglia (superiore o inferiore)
 """
 
-# Configurazione indirizzo del broker Kafka (DNS di Docker)
-kafka_broker = "kafka_container:9092"
 
 # Configurazione del consumer Kafka con commit manuale
 consumer_config = {
-    'bootstrap.servers': kafka_broker,  # Indirizzo del broker Kafka
+    'bootstrap.servers': bootstrap_servers,  # Indirizzo del broker Kafka
     'group.id': 'group1',  
     'auto.offset.reset': 'latest',  
     'enable.auto.commit': False  # Disabilita l'auto-commit degli offset
@@ -60,10 +60,6 @@ def poll_loop():
                 continue
 
             try:
-                # Log dell'offset del messaggio letto
-                offset = msg.offset()
-                logger.info(f"Messaggio ricevuto con offset: {offset}")
-
                 # Parsing del messaggio ricevuto (decodifica da JSON)
                 data = json.loads(msg.value().decode('utf-8'))
                 email = data['email']

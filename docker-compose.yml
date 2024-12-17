@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   db:
     build:
@@ -10,18 +11,6 @@ services:
     volumes:
       - db_vol:/var/lib/mysql
     container_name: mysql_container
-
-  data-collector:
-    build:
-      context: .
-      dockerfile: DataCollector/dockerfile-datacollector
-    depends_on:
-      - db
-      - kafka
-    networks:
-      - net2
-    container_name: break_collector_container
-    restart: always
 
   server-grpc:
     build:
@@ -45,39 +34,94 @@ services:
     networks:
       - net2
     restart: always
-    volumes:
-    - zookeeper_data:/var/lib/zookeeper
 
-  kafka:
+  
+  ###### 3 broker di Kafka ######
+  kafka-broker-1:
     image: confluentinc/cp-kafka:latest
-    container_name: kafka_container
+    container_name: kafka-broker-1_container
     depends_on:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_container:9092  # Usa kafka_container come nome host
-      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
-      KAFKA_LISTENER_PORT: 9092
-      KAFKA_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_container:9092,PLAINTEXT_INTERNAL://localhost:19092 
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
     networks:
       - net2
-    ports:
-      - "9092:9092"
     restart: always
     volumes:
-      - kafka_data:/var/lib/kafka/data
+      - kafka_broker_1_data:/var/lib/kafka/data
+
+  kafka-broker-2:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka-broker-2_container
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_container:9092,PLAINTEXT_INTERNAL://localhost:29092  
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    networks:
+      - net2
+    restart: always
+    volumes:
+      - kafka_broker_2_data:/var/lib/kafka/data
+
+  kafka-broker-3:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka-broker-3_container
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_container:9092,PLAINTEXT_INTERNAL://localhost:39092  
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    networks:
+      - net2
+    restart: always
+    volumes:
+      - kafka_broker_3_data:/var/lib/kafka/data
     
+  ####### ADMIN KAFKA (creazione topic e monitoraggio) #######
+  kafka-admin:
+    build:
+      context: ./KafkaAdmin
+      dockerfile: dockerfile-kafka-admin
+    container_name: kafka-admin-container
+    depends_on:
+      - kafka-broker-1
+      - kafka-broker-2
+      - kafka-broker-3
+    networks:
+      - net2
+    restart: always
+    
+  ###### produttori e consumatori kafka ######
+  data-collector:
+    build:
+      context: .
+      dockerfile: DataCollector/dockerfile-datacollector
+    depends_on:
+      - db
+      - kafka-admin
+    networks:
+      - net2
+    container_name: break_collector_container
+    restart: always
+
   alert-system:
     build:
       context: .
       dockerfile: AlertSystem/dockerfile-alertsystem
     depends_on:
-      - kafka
       - db
+      - kafka-admin
     networks:
       - net2
     container_name: alert_system_container
@@ -85,14 +129,15 @@ services:
 
   alert-notifier-system:
     build:
-      context: ./AlertNotifierSystem
-      dockerfile: dockerfile-notifier
+      context: .
+      dockerfile: AlertNotifierSystem/dockerfile-notifier
     depends_on:
-      - kafka
+      - kafka-admin
     networks:
       - net2
     container_name: alert_notifier_container
     restart: always
+
 
 networks:
   net1:
@@ -103,7 +148,10 @@ networks:
 volumes:
   db_vol:
     driver: local
-  kafka_data:
+  kafka_broker_1_data:
     driver: local
-  zookeeper_data:
+  kafka_broker_2_data:
     driver: local
+  kafka_broker_3_data:
+    driver: local
+  

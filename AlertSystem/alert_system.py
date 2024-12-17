@@ -7,6 +7,8 @@ import query_service
 from datetime import datetime
 import pytz
 import time
+from create_topic import bootstrap_servers
+
 
 tz = pytz.timezone('Europe/Rome') 
 
@@ -15,26 +17,24 @@ logging.basicConfig(level=logging.INFO)  # Imposta il livello di log a INFO
 logger = logging.getLogger(__name__)  # Crea un logger per il modulo
 
 """
-    Il componente AlertSystem è un servizio indipendente che, alla ricezione di messaggio 
-    nel topic Kafka "to-alert-system" (kafka consumer), scandisce il database e, 
+    il componente AlertSystem è un servizio indipendente che, alla ricezione di un messaggio 
+    nel topic  Kafka  "to-alert-system" (kafka consumer), scandisce il database e, 
     per ogni profilo in cui il valore del ticker è o maggiore di high-value o minore 
-    di low-value (se dati), invia un messaggio (kafka producer) sul topic Kafka 
-    "to-notifier" contenente i parametri <email, ticker, condizione di superamento soglia>.
+    di low-value (se dati), invia un messaggio  (kafka producer)  sul topic Kafka 
+    "to-notifier"  contenente i parametri <email, ticker,  condizione di superamento soglia>.
 """
 
-# Configurazione indirizzo del broker Kafka (sfruttando il DNS di Docker)
-kafka_broker = "kafka_container:9092" 
 
 # Configurazione del consumatore Kafka con commit manuale (auto commit disabilitato)
 consumer_config = {
-    'bootstrap.servers': kafka_broker,  
+    'bootstrap.servers': bootstrap_servers,  
     'group.id': 'group1',  
     'auto.offset.reset': 'latest',  
     'enable.auto.commit': False,  
 }
 
 producer_config = {
-    'bootstrap.servers': kafka_broker, 
+    'bootstrap.servers': bootstrap_servers, 
     'acks': 1,  
     'linger.ms': 0,  # Tempo massimo che il produttore aspetta prima di inviare i messaggi nel buffer
     'compression.type': 'gzip',  # Compressione dei messaggi per ridurre la larghezza di banda
@@ -68,8 +68,10 @@ def poll_loop():
                 il fatto che sia presente garantisce l'avvenuto aggiornamento dei valori
                 nel database da parte del DataCollector)
             """
+
             logger.info(f"Messaggio recuperato: {json.loads(msg.value().decode('utf-8'))}") 
             logger.info(f"Dettagli messaggio: topic:{msg.topic()}, partizione:{msg.partition()}, offset:{msg.offset()}") 
+           
     
             scan_database_and_notify()  # Questa funzione si occupa anche della produzione
 

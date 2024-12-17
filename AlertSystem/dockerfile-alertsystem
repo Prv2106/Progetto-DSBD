@@ -3,13 +3,15 @@ FROM python:3.9
 WORKDIR /app
 
 RUN pip install pymysql
-RUN pip install bcrypt pymysql
-RUN pip install cryptography
 RUN pip install confluent_kafka
 RUN pip install pytz
+RUN pip install kafka-python
+
 
 COPY DB/db_config.py /app/
 COPY AlertSystem/alert_system.py /app/
 COPY CQRS/query_service.py .
+COPY KafkaAdmin/create_topic.py .
+
 
 CMD [ "python", "alert_system.py"]
