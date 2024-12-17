@@ -9,4 +9,5 @@ RUN pip install pytz
 COPY cluster_metadata.py .
 COPY create_topic.py .
 
+
 CMD [ "python", "cluster_metadata.py"]

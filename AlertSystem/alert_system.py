@@ -43,12 +43,11 @@ producer_config = {
 }  
 
 
-consumer = Consumer(consumer_config)  
-producer = Producer(producer_config)  
-
 
 in_topic = 'to-alert-system'  
 out_topic = 'to-notifier'  
+
+
 
 def poll_loop():
     logger.info("In attesa di messaggi dal topic 'to-alert-system'...")  
@@ -130,15 +129,11 @@ def scan_database_and_notify():
         conn.close()  
 
 if __name__ == "__main__":
+    print("Preparazione dell'alert system...")
+    time.sleep(30)
     
-    while True:
-        logger.info(f"Tentativo di iscrizione al topic {in_topic}...")
-        time.sleep(2)
-        try:
-            consumer.subscribe([in_topic])
-            logger.info("Iscrizione avvenuta con successo")
-            break
-        except Exception as e:
-            logger.error("Tentativo di iscrizione al topic fallito... Riprovo.")
-    
+    consumer = Consumer(consumer_config)  
+    producer = Producer(producer_config)  
+
+    consumer.subscribe([in_topic])
     poll_loop()  # Avvia il ciclo di polling per ricevere messaggi

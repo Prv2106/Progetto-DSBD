@@ -24,18 +24,15 @@ logger = logging.getLogger(__name__)
 
 # Configurazione del consumer Kafka con commit manuale
 consumer_config = {
-    'bootstrap.servers': bootstrap_servers,  # Indirizzo del broker Kafka
+    'bootstrap.servers': ','.join(bootstrap_servers), 
     'group.id': 'group1',  
     'auto.offset.reset': 'latest',  
     'enable.auto.commit': False  # Disabilita l'auto-commit degli offset
 }
 
-# Creazione del consumer Kafka
-consumer = Consumer(consumer_config)
+
 in_topic = 'to-notifier' 
 
-# Iscrizione del consumer al topic
-consumer.subscribe([in_topic])
 
 
 def poll_loop():
@@ -43,7 +40,6 @@ def poll_loop():
     Funzione principale che ascolta i messaggi dal topic Kafka.
     Dopo aver elaborato correttamente ogni messaggio, il commit dell'offset viene eseguito manualmente.
     """
-
     logger.info("In attesa di messaggi dal topic 'to-notifier'...")
     try:
         while True:
@@ -136,4 +132,10 @@ if __name__ == "__main__":
     
     
     # Avvio del loop principale di ascolto dei messaggi
+    print("Preparazione del notifier...")
+    time.sleep(30)
+    # Creazione del consumer Kafka
+    consumer = Consumer(consumer_config)
+    # Iscrizione del consumer al topic
+    consumer.subscribe([in_topic])
     poll_loop()
