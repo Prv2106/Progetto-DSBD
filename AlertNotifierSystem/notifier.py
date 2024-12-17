@@ -24,18 +24,15 @@ logger = logging.getLogger(__name__)
 
 # Configurazione del consumer Kafka con commit manuale
 consumer_config = {
-    'bootstrap.servers': bootstrap_servers,  # Indirizzo del broker Kafka
+    'bootstrap.servers': ','.join(bootstrap_servers), 
     'group.id': 'group1',  
-    'auto.offset.reset': 'latest',  # Se il consumer non ha un offset salvato legge solo i nuovi messaggi (non quelli vecchi)
+    'auto.offset.reset': 'earliest',  
     'enable.auto.commit': False  # Disabilita l'auto-commit degli offset
 }
 
-# Creazione del consumer Kafka
-consumer = Consumer(consumer_config)
+
 in_topic = 'to-notifier' 
 
-# Iscrizione del consumer al topic
-consumer.subscribe([in_topic])
 
 
 def poll_loop():
@@ -43,9 +40,6 @@ def poll_loop():
     Funzione principale che ascolta i messaggi dal topic Kafka.
     Dopo aver elaborato correttamente ogni messaggio, il commit dell'offset viene eseguito manualmente.
     """
-    logger.info("Preparazione del notifier...")
-    time.sleep(10) # Diamo il tempo a kafka di mettere su la connessione
-
     logger.info("In attesa di messaggi dal topic 'to-notifier'...")
     try:
         while True:
@@ -80,7 +74,7 @@ def poll_loop():
                 # Commit manuale dell'offset dopo elaborazione riuscita
                 # asynchronous=False significa che il consumer aspetta che Kafka confermi che il commit dell'offset è stato completato prima di proseguire con l'elaborazione del prossimo messaggio
                 consumer.commit(asynchronous=False)
-                logger.info("Offset committato manualmente dopo elaborazione del messaggio.")
+                logger.info(f"Offset committato manualmente dopo elaborazione del messaggio (offset -> {msg.offset})")
 
             except json.JSONDecodeError as e:
                 # Errore di parsing JSON
@@ -124,6 +118,12 @@ def send_email(to_email, subject, body):
         logger.error(f"Errore durante l'invio dell'email: {e}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":      
     # Avvio del loop principale di ascolto dei messaggi
+    print("Preparazione del notifier...")
+    time.sleep(30)
+    # Creazione del consumer Kafka
+    consumer = Consumer(consumer_config)
+    # Iscrizione del consumer al topic
+    consumer.subscribe([in_topic])
     poll_loop()

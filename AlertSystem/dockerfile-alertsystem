@@ -13,5 +13,4 @@ COPY AlertSystem/alert_system.py /app/
 COPY CQRS/query_service.py .
 COPY KafkaAdmin/create_topic.py .
 
-
 CMD [ "python", "alert_system.py"]

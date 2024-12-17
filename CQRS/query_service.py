@@ -114,15 +114,32 @@ class GetUserDetailsQuery:
 # Query per trovare profili che superano le soglie
 class GetDistinctUsersValuesQuery:
     def __init__(self,conn):
-        self.get_disticnt_profiles_query = """
-            SELECT DISTINCT u.email, u.ticker, d.valore_euro, u.low_value, u.high_value
-            FROM Users u
-            JOIN Data d ON u.ticker = d.ticker
-            WHERE 
-                (u.low_value IS NOT NULL AND d.valore_euro < u.low_value AND u.low_value > 0)
+        self.get_distinct_profiles_query = """
+            WITH RecentData AS (
+                SELECT 
+                    u.email, 
+                    u.ticker, 
+                    d.valore_euro, 
+                    u.low_value, 
+                    u.high_value,
+                    ROW_NUMBER() OVER (PARTITION BY u.email, u.ticker ORDER BY d.timestamp DESC) AS rn
+                FROM Users u
+                JOIN Data d ON u.ticker = d.ticker
+                WHERE 
+                    (u.low_value IS NOT NULL AND u.low_value > 0)
+                    OR 
+                    (u.high_value IS NOT NULL AND u.high_value > 0)
+            )
+            SELECT email, ticker, valore_euro, low_value, high_value
+            FROM RecentData
+            WHERE rn = 1
+            AND 
+                ((low_value IS NOT NULL AND valore_euro < low_value) 
                 OR 
-                (u.high_value IS NOT NULL AND d.valore_euro > u.high_value AND u.high_value > 0);
+                (high_value IS NOT NULL AND valore_euro > high_value));
         """
+
+
         self.conn = conn
 
 
@@ -187,5 +204,5 @@ class QueryService:
         
     def handle_get_distinct_users_values(self, query: GetDistinctUsersValuesQuery):
         with query.conn.cursor() as cursor:
-            cursor.execute(query.get_disticnt_profiles_query)
+            cursor.execute(query.get_distinct_profiles_query)
             return cursor.fetchall()
