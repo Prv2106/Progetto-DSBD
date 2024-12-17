@@ -27,14 +27,14 @@ logger = logging.getLogger(__name__)  # Crea un logger per il modulo
 
 # Configurazione del consumatore Kafka con commit manuale (auto commit disabilitato)
 consumer_config = {
-    'bootstrap.servers': bootstrap_servers,  
+    'bootstrap.servers': ','.join(bootstrap_servers), 
     'group.id': 'group1',  
     'auto.offset.reset': 'latest',  
     'enable.auto.commit': False,  
 }
 
 producer_config = {
-    'bootstrap.servers': bootstrap_servers, 
+    'bootstrap.servers': ','.join(bootstrap_servers),  
     'acks': 1,  
     'linger.ms': 0,  # Tempo massimo che il produttore aspetta prima di inviare i messaggi nel buffer
     'compression.type': 'gzip',  # Compressione dei messaggi per ridurre la larghezza di banda

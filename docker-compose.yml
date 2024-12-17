@@ -123,34 +123,6 @@ services:
 
       - kafka_broker_3_data:/var/lib/kafka/data
 
-    
-  ####### ADMIN KAFKA (creazione topic e monitoraggio) #######
-  kafka-admin:
-    build:
-      context: ./KafkaAdmin
-      dockerfile: dockerfile-kafka-admin
-    container_name: kafka-admin-container
-    depends_on:
-      - kafka-broker-1
-      - kafka-broker-2
-      - kafka-broker-3
-    networks:
-      - net2
-    restart: always
-    
-  ###### produttori e consumatori kafka ######
-  data-collector:
-    build:
-      context: .
-      dockerfile: DataCollector/dockerfile-datacollector
-    depends_on:
-      - db
-      - kafka-admin
-    networks:
-      - net2
-    container_name: break_collector_container
-    restart: always
-
   alert-system:
     build:
       context: .
@@ -187,11 +159,6 @@ volumes:
   kafka_broker_1_data:
     driver: local
   kafka_broker_2_data:
-  kafka_broker_1_data:
-    driver: local
-  kafka_broker_2_data:
-    driver: local
-  kafka_broker_3_data:
     driver: local
   kafka_broker_3_data:
     driver: local
