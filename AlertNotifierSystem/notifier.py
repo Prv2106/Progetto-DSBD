@@ -48,6 +48,7 @@ def poll_loop():
 
             # Se nessun messaggio è stato ricevuto, continua
             if msg is None:
+                logger.info("Nessun messaggio trovato...")
                 continue  
 
             # Gestione degli errori di polling
@@ -118,19 +119,7 @@ def send_email(to_email, subject, body):
         logger.error(f"Errore durante l'invio dell'email: {e}")
 
 
-if __name__ == "__main__":
-    
-    while True:
-        logger.info(f"Tentativo di iscrizione al topic {in_topic}...")
-        time.sleep(2)
-        try:
-            consumer.subscribe([in_topic])
-            logger.info("Iscrizione avvenuta con successo")
-            break
-        except Exception as e:
-            logger.error(f"Tentativo di iscrizione al topic fallito... Riprovo.")
-    
-    
+if __name__ == "__main__":      
     # Avvio del loop principale di ascolto dei messaggi
     print("Preparazione del notifier...")
     time.sleep(30)

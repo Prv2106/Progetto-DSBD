@@ -121,8 +121,6 @@ services:
     container_name: break_collector_container
     restart: always
 
-      - kafka_broker_3_data:/var/lib/kafka/data
-
   alert-system:
     build:
       context: .

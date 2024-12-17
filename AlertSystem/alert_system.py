@@ -35,7 +35,7 @@ consumer_config = {
 
 producer_config = {
     'bootstrap.servers': ','.join(bootstrap_servers),  
-    'acks': 1,  
+    'acks': 'all',  
     'linger.ms': 0,  # Tempo massimo che il produttore aspetta prima di inviare i messaggi nel buffer
     'compression.type': 'gzip',  # Compressione dei messaggi per ridurre la larghezza di banda
     'max.in.flight.requests.per.connection': 1,  # Numero massimo di richieste inviate senza risposta
@@ -46,7 +46,7 @@ producer_config = {
 
 in_topic = 'to-alert-system'  
 out_topic = 'to-notifier'  
-
+start_time = 0 # variabile utilizzata per monitorare la latenza dei messaggi prodotti
 
 
 def poll_loop():
@@ -54,8 +54,9 @@ def poll_loop():
     try:
         while True:
             # Poll per nuovi messaggi dal topic "in_topic"
-            msg = consumer.poll(3.0)  
+            msg = consumer.poll(1.0)  
             if msg is None:
+                logger.info("nessun messaggio trovato...")
                 continue  # Se nessun messaggio è stato ricevuto, continua a fare polling
             if msg.error():
                 print(f"Consumer error: {msg.error()}")  
@@ -87,15 +88,16 @@ def poll_loop():
         consumer.close()  # Chiude il consumer quando il programma termina
 
 def delivery_report(err, msg):
-    """Callback per riportare il risultato della consegna del messaggio."""
-    if err:
-        logger.error(f"Delivery failed: {err}")  # Se la consegna fallisce, stampa l'errore
+    end_time = time.time()  # Tempo finale
+    if err is not None:
+        logger.error(f"delivery_report: Errore nella consegna del messaggio: {err}")
     else:
-        # Se il messaggio viene consegnato con successo, stampa dove è stato inviato
-        logger.info(f"Callback delivery_report: Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
-
+        latency = end_time - msg.timestamp()[1] / 1000  # Calcola latenza in secondi
+        logger.info(f"delivery_report: Messaggio consegnato con successo al topic {msg.topic()} "
+                    f"nella partizione {msg.partition()} con latenza {latency:.3f}s")
 
 def scan_database_and_notify():
+    global start_time
     """
     Scansiona il database per identificare ticker che superano le soglie e invia notifiche.
     """
@@ -115,6 +117,7 @@ def scan_database_and_notify():
                 # Log per tracciare l'invio del messaggio prima del flush
                 logger.info(f"Preparazione per inviare il messaggio: {message}")
 
+                start_time = time.time()
                 producer.produce(out_topic, json.dumps(message), callback=delivery_report)
                 
                 # Log prima del flush per confermare l'invio del messaggio al produttore
@@ -129,7 +132,7 @@ def scan_database_and_notify():
         conn.close()  
 
 if __name__ == "__main__":
-    print("Preparazione dell'alert system...")
+    logger.info("Preparazione dell'alert system...")
     time.sleep(30)
     
     consumer = Consumer(consumer_config)  

@@ -24,11 +24,12 @@ circuit_breaker = CircuitBreaker(f_threshold = 3, r_timeout= 20)
 maximum_occurrences = 200 # numero max di entry nella tabella Data per ciascun ticker
 last_tickers = [] # lista dei ticker recuperati all'iterazione precedente
 
+start_time = 0 # variabile utilizzata per monitorare la latenza dei messaggi prodotti
 
 # configurazione produttore
 producer_config = {
     'bootstrap.servers': ','.join(bootstrap_servers), 
-    'acks': 1, 
+    'acks': 'all', 
     'linger.ms': 0, # tempo max (ms) che aspetta prima di inviare i messaggi accumulati nel buffer. Se 0, vengono inviati immediatamente.
     'compression.type': 'gzip',
     'max.in.flight.requests.per.connection': 1,  
@@ -86,9 +87,19 @@ def fetch_ticker_from_db(conn):
         logger.error(f"data_collector: Errore durante il recupero dei ticker dal db, codice di errore: {e}")
         return []
 
+def delivery_report(err, msg):
+    end_time = time.time()  # Tempo finale
+    if err is not None:
+        logger.error(f"delivery_report: Errore nella consegna del messaggio: {err}")
+    else:
+        latency = end_time - msg.timestamp()[1] / 1000  # Calcola latenza in secondi
+        logger.info(f"delivery_report: Messaggio consegnato con successo al topic {msg.topic()} "
+                    f"nella partizione {msg.partition()} con latenza {latency:.3f}s")
+
 
 def data_collector():
     global last_tickers
+    global start_time
     request_count = 0 # contatore per gestire la velocità delle richieste
     
     while True:
@@ -96,7 +107,7 @@ def data_collector():
         if request_count > 300:
             time.sleep(3600) # aggiorna ogni ora
         elif request_count <1: # All'avvio esegue subito un ciclo
-            continue
+            pass
         else:
             time.sleep(120) # aggiorna ogni 2 min
         logger.info(f">>>>>>>>>>>>>>>>>>>>>>>>> Ciclo {request_count + 1}:")
@@ -171,11 +182,13 @@ def data_collector():
                         # Gestione degli errori MySQL
                         logger.info(f"data_collector: Errore nelle query al database... Codice di errore: {e}")
                         continue  # Continuiamo con il prossimo ticker
-
-                ##### è qui che dobbiamo notificare al nuovo componente di aver finito
-                producer.produce(out_topic, json.dumps(f"database aggiornato: {datetime.now(tz)}"))
+                
+                
+                # Produciamo il messaggio per Kafka
+                start_time = time.time()  # Tempo iniziale
+                producer.produce(out_topic, json.dumps(f"database aggiornato: {datetime.now(tz)}"), callback=delivery_report)
                 producer.flush()  
-                logger.info("data_collector: Messaggio prodotto")
+                logger.info(f"data_collector: Messaggio prodotto {datetime.now(tz)}")
                 
         except pymysql.MySQLError as e:
             # Gestione degli errori durante la connessione al database
