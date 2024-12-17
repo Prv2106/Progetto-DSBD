@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)  # Crea un logger per il modulo
 consumer_config = {
     'bootstrap.servers': ','.join(bootstrap_servers), 
     'group.id': 'group1',  
-    'auto.offset.reset': 'latest',  
+    'auto.offset.reset': 'earliest',  
     'enable.auto.commit': False,  
 }
 
@@ -56,7 +56,6 @@ def poll_loop():
             # Poll per nuovi messaggi dal topic "in_topic"
             msg = consumer.poll(1.0)  
             if msg is None:
-                logger.info("nessun messaggio trovato...")
                 continue  # Se nessun messaggio è stato ricevuto, continua a fare polling
             if msg.error():
                 print(f"Consumer error: {msg.error()}")  

@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 consumer_config = {
     'bootstrap.servers': ','.join(bootstrap_servers), 
     'group.id': 'group1',  
-    'auto.offset.reset': 'latest',  
+    'auto.offset.reset': 'earliest',  
     'enable.auto.commit': False  # Disabilita l'auto-commit degli offset
 }
 
@@ -48,7 +48,6 @@ def poll_loop():
 
             # Se nessun messaggio è stato ricevuto, continua
             if msg is None:
-                logger.info("Nessun messaggio trovato...")
                 continue  
 
             # Gestione degli errori di polling
