@@ -33,19 +33,20 @@ in_topic = 'to-notifier'
 
 
 # dizionario di dizionari che serve per evitare di mandare due o più email con lo stesso valore
-# chiave: email utente; valore = dizionario contenente valore e condizione
+# chiave: email utente; valore = dizionario contenente valore, condizione e ticker
 mail_cache = {} 
 """
-E' qualcosa del tipo:
-{
-    'utente@example.come': {
-        'value': 10
-        'condition': 'higher'
-    }
-}
+        E' qualcosa del tipo:
+        {
+            'utente@example.come': {
+                'value': 10
+                'condition': 'higher'
+                'ticker' 'AMZN'
+            }
+        }
 """
 
-def is_cache_outdated(email, value, condition_placeholder):
+def is_cache_outdated(email, value, condition_placeholder, ticker):
     '''
         Questa funzione fa un check sulla cache sulla base dei valori del ciclo corrente...
         Se il valore del ticker e la condizione sono uguali a quelle memorizzate allora 
@@ -58,21 +59,25 @@ def is_cache_outdated(email, value, condition_placeholder):
     if mail_cache is not None and email in mail_cache:
         old_value = int(mail_cache[email]['value'])  
         old_condition = mail_cache[email]['condition']
+        old_ticker = mail_cache[email]['ticker']
 
-        logger.info(f"Confronto cache: email={email}, old_value={old_value}, new_value={int(value)}, "
+        logger.info(f"Confronto cache: email={email},"
+                    f"old_ticker={old_ticker}, new_ticker={ticker}, ," 
+                    f"old_value={old_value}, new_value={int(value)},"
                     f"old_condition={old_condition}, new_condition={condition_placeholder}")
 
         # Forza il tipo di value a float prima del confronto
-        if int(value) == old_value and condition_placeholder == old_condition:
+        if int(value) == old_value and condition_placeholder == old_condition and old_ticker == ticker:
             return False  # non inviare l'email
     return True  # inviare l'email
          
                     
-def save_into_cache(email, value, condition_placeholder):
+def save_into_cache(email, value, condition_placeholder, ticker):
     if email not in mail_cache:  # se è la prima volta dobbiamo inizializzare
         mail_cache[email] = {}
     mail_cache[email]['value'] = int(value)
     mail_cache[email]['condition'] = condition_placeholder
+    mail_cache[email]['ticker'] = ticker
 
 
 def poll_loop():
@@ -109,7 +114,7 @@ def poll_loop():
                 logger.info(f"Dettagli messaggio: topic:{msg.topic()}, partizione:{msg.partition()}, offset:{msg.offset()}") 
 
                 # vediamo se possiamo procedere con l'invio della mail o questa è ridondante
-                ok = is_cache_outdated(email, value, condition_placeholder)
+                ok = is_cache_outdated(email, value, condition_placeholder, ticker)
                 if ok:
                     # Invio dell'email... creazione del contenuto dell'email
                     subject = f"Ticker: {ticker}"
@@ -118,7 +123,7 @@ def poll_loop():
                     send_email(email, subject, body)
 
                     # salvataggio in memoria dell'email per evitare email ridondanti
-                    save_into_cache(email, value, condition_placeholder)
+                    save_into_cache(email, value, condition_placeholder, ticker)
                 else:
                     logger.info(f"Notifier: l'email non è stata mandata perchè ridondante! email={email}, ticker={ticker}")
 

@@ -86,6 +86,24 @@ def poll_loop():
     finally:
         consumer.close()  # Chiude il consumer quando il programma termina
 
+def check_condition(value, low, high):
+    """
+        Stabilisce la condizione per cui la query sul database ha dato dei risultati
+        (ovvero, se è stata superata una soglia massima o una soglia minima)
+    """
+
+    higher = False
+    if low > -1 and high > -1: # se l'utente ha messo entrembe le soglie
+        if value > high: 
+            higher = True
+        elif value < low:
+            higher = False
+    elif low == - 1 and high > -1:
+        higher = True
+    else:
+        higher = False
+    return higher
+
 def delivery_report(err, msg):
     end_time = time.time()  # Tempo finale
     if err is not None:
@@ -108,11 +126,12 @@ def scan_database_and_notify():
         logger.info(f"\nRESULTS:\n {results}")
         # Elabora i risultati e invia notifiche per ogni profilo
         for email, ticker, value, low, high in results:
+                is_higher = check_condition(value, low, high)
                 message = {
                     "email": email,  # Indirizzo email del destinatario
                     "ticker": ticker,  # Ticker del profilo
-                    "condition": f"Aggiornamento {datetime.now(tz)}:\nIl valore di {ticker} è sceso al di sotto della soglia da te indicata ({low})" if value < low else f"Aggiornamento {datetime.now(tz)}:\nIl valore di {ticker} è salito al di sopra della soglia da te indicata ({high})",
-                    "condition_placeholder": "higher" if value > high else "lower",
+                    "condition": f"Aggiornamento {datetime.now(tz)}:\nIl valore di {ticker} ({value}) è salito al di sopra della soglia da te indicata ({high})" if is_higher else f"Aggiornamento {datetime.now(tz)}:\nIl valore di {ticker} ({value}) è sceso al di sotto della soglia da te indicata ({low})",
+                    "condition_placeholder": "higher" if is_higher else "lower",
                     "value": float(value)
                 }
                 # Log per tracciare l'invio del messaggio prima del flush
