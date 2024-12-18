@@ -13,7 +13,7 @@ RUN pip install pytz
 COPY AlertNotifierSystem/notifier.py .
 COPY AlertNotifierSystem/email_config.py .
 COPY KafkaAdmin/create_topic.py .
-COPY DataCollector/circuit_breaker.py .
+COPY CircuitBreaker/circuit_breaker.py .
 
 
 CMD [ "python", "notifier.py"]
