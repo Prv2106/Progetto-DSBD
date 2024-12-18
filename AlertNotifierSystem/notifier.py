@@ -7,11 +7,15 @@ from email.mime.text import MIMEText
 import email_config
 import time
 from create_topic import bootstrap_servers
+from circuit_breaker import CircuitBreakerOpenException, CircuitBreaker
 
 
 # Configurazione del logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# istanza del Circuit Breaker
+circuit_breaker = CircuitBreaker(f_threshold=3, r_timeout=20)
 
 """
     Il componente AlertNotifierSystem è un servizio indipendente che, alla ricezione 
@@ -120,7 +124,25 @@ def poll_loop():
                     subject = f"Ticker: {ticker}"
                     body = f"{condition}!"
 
-                    send_email(email, subject, body)
+                    max_num_attempts = 5
+                    attempts_count = 0
+                    while attempts_count < max_num_attempts:
+                        try:
+                            # qui è dove ci interfacciamo al servizio SMTP esterno (Mailo o Google)
+                            circuit_breaker.call(send_email, email, subject, body)
+                            logger.info(f"Notifier: email inviata con successo a {email}")
+                            break
+                        
+                        except CircuitBreakerOpenException as e:
+                            # Eccezione sollevata quando il Circuit Breaker è nello stato "OPEN"
+                            logger.error(f"{e}")
+                            attempts_count +=1
+                            
+                        except Exception as e:
+                            # Altri tipi di eccezione (es. server fallisce)
+                            logger.error(f"{e}")
+                            attempts_count +=1
+                          
 
                     # salvataggio in memoria dell'email per evitare email ridondanti
                     save_into_cache(email, value, condition_placeholder, ticker)
@@ -130,7 +152,12 @@ def poll_loop():
                 # Commit manuale dell'offset dopo elaborazione riuscita
                 # asynchronous=False significa che il consumer aspetta che Kafka confermi che il commit dell'offset è stato completato prima di proseguire con l'elaborazione del prossimo messaggio
                 consumer.commit(asynchronous=False)
-                logger.info(f"Offset committato manualmente dopo elaborazione del messaggio (offset -> {msg.offset})")
+
+                if attempts_count == 5:
+                    logger.info(f"Offset committato manualmente dopo elaborazione del messaggio (richiesta NON andata a buon fine)")
+                else:
+                    logger.info(f"Offset committato manualmente dopo elaborazione del messaggio (richiesta eseguita con successo)")
+
 
 
             except json.JSONDecodeError as e:
@@ -170,14 +197,13 @@ def send_email(to_email, subject, body):
             server.starttls()  # Attiva la connessione TLS
             server.login(email_config.email, email_config.password)  # Login al server
             server.sendmail(email_config.email, to_email, msg.as_string())  # Invio del messaggio
-            logger.info(f"Notifier: email inviata con successo a {to_email}")
     except Exception as e:
         logger.error(f"Errore durante l'invio dell'email: {e}")
 
 
 if __name__ == "__main__":      
     # Avvio del loop principale di ascolto dei messaggi
-    print("Preparazione del notifier...")
+    logger.info("Preparazione del notifier...")
     time.sleep(30)
     # Creazione del consumer Kafka
     consumer = Consumer(consumer_config)
