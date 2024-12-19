@@ -25,6 +25,9 @@ class RegisterUserCommand:
             logger.error("Email non valida")
             raise ValueError("Email non valida")
         
+        if(low_value >= 0 and low_value <1) or (high_value >= 0 and high_value <1):
+            logger.error("Non è possibile inserire 0 come soglia")
+            raise ValueError("Non è possibile inserire 0 come soglia")   
         
         if (low_value > 0 and high_value > 0) and low_value >= high_value:
             logger.error("Soglie inserite non valide (high_value deve essere > di low_value)")
@@ -126,6 +129,10 @@ class DeleteOldEntryByTickerCommand:
 class UpdateLowValueByUserCommand:
     def __init__(self,email, low_value, high_value ,conn):
         
+        if(low_value >= 0 and low_value <1):
+            logger.error("Non è possibile inserire 0 come soglia")
+            raise ValueError("Non è possibile inserire 0 come soglia")   
+        
         if (high_value <= low_value) and high_value > 0:
             logger.error("Soglia inserita non valida (high_value deve essere > di low_value)")
             raise ValueError("Soglia inserita non valida (high_value deve essere > di low_value)")
@@ -151,14 +158,19 @@ class UpdateHighValueByUserCommand:
     
     def __init__(self,email, high_value, low_value,conn):
         
+        if(high_value >= 0 and high_value <1):
+            logger.error("Non è possibile inserire 0 come soglia")
+            raise ValueError("Non è possibile inserire 0 come soglia")   
+        
         if (high_value <= low_value) and low_value > 0:
             logger.error("Soglia inserita non valida (high_value deve essere > di low_value)")
             raise ValueError("Soglia inserita non valida (high_value deve essere > di low_value)")
-        if low_value == -1:
+        if high_value == -1:
             logger.info("Soglia resettata")
-        elif low_value < 0:
+        elif high_value < 0:
             logger.error("Hai inserito una soglia negativa, pertanto non sarà considerata")
             raise ValueError("Hai inserito una soglia negativa, pertanto non sarà considerata")
+        
         
         self.update_high_value_command= """
             UPDATE Users
