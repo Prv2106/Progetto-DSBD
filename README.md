@@ -1,123 +1,94 @@
-# Progetto DSBD
-**DESCRIZIONE APPLICAZIONE**
+**HOMEWORK 2 \- Distributed Systems and Big Data**  
+**UniCT \- Anno Accademico 2024/2025**
 
-Il progetto implementa un'architettura per la gestione di utenti e di dati finanziari mediante un server gRPC, un database MySQL ed un Data Collector le cui richieste verso il fornitore di servizi remoti Yahoo\! Finance sono protette mediante il Pattern Circuit Breaker.
+# **DESCRIZIONE DEL SISTEMA**
 
-Il nostro lavoro mira ad ottimizzare la gestione dei dati utilizzando un’architettura resiliente. In particolare, sono stati implementati dei meccanismi come, ad esempio, il consolidamento delle richieste per ticker comuni: se più utenti seguono lo stesso titolo azionario, viene effettuata una singola richiesta a Yahoo\! Finance, riducendo il carico sul sistema e migliorando l'efficienza.
+Il progetto estende l'architettura esistente introducendo un nuovo modo di gestire l’interazione con il database (usando il pattern CQRS) e la notifica asincrona agli utenti. In particolare, gli utenti possono ora ricevere un'email ogni volta che il valore del loro ticker di interesse supera una soglia predefinita, sia al rialzo (high-value) che al ribasso (low-value). 
 
-Inoltre, il server gRPC implementa la politica "at-most-once" per tutte le funzionalità di gestione degli utenti e di recupero delle informazioni. 
+Alla registrazione, l'utente può fornire uno o entrambi questi parametri, successivamente aggiornabili tramite apposite RPC.
 
-Il Data Collector opera ciclicamente per aggiornare i dati relativi ai titoli seguiti dagli utenti. Le sue caratteristiche principali sono (che verranno discusse in seguito):
+La nuova funzionalità di notifica asincrona si basa sull'integrazione di Apache Kafka. Nello specifico, la backbone di comunicazione è stata implementata con un cluster formato da 3 broker.
 
-* Aggiornamento dei valori in uscita per i ticker.  
-* Comportamento adattivo nella frequenza delle richieste.  
-* Limite per dati di uno stesso ticker.   
-* Pulizia dati.
+Un'ulteriore ottimizzazione è stata introdotta nella gestione delle soglie di notifica (high-value e low-value): per evitare notifiche ridondanti, il sistema tiene traccia delle condizioni precedenti, inviando un'email solo al verificarsi di una reale variazione di stato. Ciò è stato fatto con l’obiettivo di non avere delle email duplicate inviate all'utente, così da non inviare richieste inutili al servizio SMTP esterno e, quindi, così da garantire una maggiore efficienza complessiva del sistema.
 
+Infine, è stata riutilizzata l’implementazione custom del Circuit Breaker anche nell’AlertNotifierSystem.
 
-Il Circuit Breaker, invece, previene sovraccarichi o richieste ripetute al servizio di Yahoo\! Finance in caso di malfunzionamenti. Prevede tre stati principali: *CLOSED* (fa passare tutte le richieste), *OPEN* (le richieste vengono bloccate), e *HALF OPEN* (fase di test in cui passano solo alcune richieste per valutare il ripristino del servizio). 
+# **SCELTE PROGETTUALI**
 
-**SCELTE PROGETTUALI**
-
-SCHEMA ARCHITETTURALE:
-![IMG_3500](https://github.com/user-attachments/assets/3d36baaa-04d7-4cd8-b6e6-010b48f5a890)
-
-Per la realizzazione della nostra applicazione distribuita abbiamo utilizzato 3 container: uno per il database (mysql\_container), uno per il server gRPC (grpc\_server\_container) e uno per il Data Collector \+ il Circuit Breaker (break\_collector\_container). Di conseguenza, ci siamo limitati a implementare solamente 2 microservizi (server gRPC e  Data Collector \+ Circuit Breaker). 
-
-La scelta di utilizzare un solo container per il server gRPC è stata presa in funzione del fatto che esso sia relativamente semplice; pertanto, una sua ulteriore scomposizione in microservizi non avrebbe portato ad un miglioramento significativo, anzi, avrebbe aumentato la complessità (gestione di più container, endpoint, configurazioni, e bilanciamento del carico). 
-
-Specificamente, il server si occupa di gestire le richieste degli utenti, mentre il Data Collector, è responsabile della raccolta dei dati da Yahoo\! Finance. Separando questi due compiti (con 2 container docker), abbiamo garantito una chiara separazione delle responsabilità, pur mantenendo l'architettura semplice e facilmente manutenibile.  
-La separazione delle responsabilità tra i due microservizi è ulteriormente evidenziata dalla nostra scelta di utilizzare due reti Docker separate (net1 e net2) che permettono di isolare i servizi tra di loro anche a livello di rete, in modo da ridurre i rischi associati a comunicazioni non necessarie tra i vari componenti.
-
-I due microservizi  comunicano indirettamente attraverso il database (che si trova in entrambe le reti), che funge da punto centrale per i dati degli utenti e i dati finanziari. 
-
-Infine, il client gRPC di test comunica con il server mediante il canale realizzato sulla porta 50051 grazie al port mapping.
-
-**MICROSERVIZI E LORO INTERAZIONI**:
-
-* **Server gRPC**
-
-  * **Dettagli implementativi:**  
-    * Inserito nel container “grpc\_server\_container” all’interno della rete “net1”.  
-    * Port Mapping 50051:50051 per consentire la comunicazione tra il client e il server.  
-    * La politica at-most-once è stata implementata per tutte le RPC (Remote Procedure Call) esposte dal server, questo perché, così facendo, non solo viene garantita l’idempotenza delle operazioni che modificano lo stato del sistema (modificano il db) ma viene anche ridotto l’eventuale overhead dovuto alla ri-esecuzione di query al database che erano già stati effettuati per una data richiesta. Per implementare tale politica si è scelto di utilizzare come cache un dizionario di dizionari dove la prima chiave corrisponde al request\_id (uuid generato dal client ogni volta prima di effettuare la richiesta) e il valore è un ulteriore dizionario la cui chiave è lo user\_id (email dell’utente),  il cui valore è la risposta in sé. In questo modo, quando il il server deve verificare se una richiesta è già stata processata fa una doppia verifica (una sul request\_id e una sullo user\_id) in modo da ridurre ulteriormente la probabilità di avere inconsistenza nelle risposte a causa di eventuali richieste con lo stesso id (in collisione).  
-    * Meccanismo di pulizia della cache: per rendere il server più efficiente, è stato impostato un limite sulla dimensione della cache (ovvero, il numero di chiavi sul dizionario più esterno) ed è stato implementato un meccanismo per il quale, non appena tale limite viene superato, viene rimosso dalla cache l’elemento più vecchio (per fare ciò si è sfruttato il fatto che a partire dalla 3° versione di python i dizionari seguono l’ordine di inserimento).  
-
-  * **Interazioni:**  
-    * Comunica con il DB per leggere o aggiornare i dati relativi agli utenti e ai ticker.  
-    * Fornisce API verso il client per esporre le funzionalità richieste dal progetto. Nello specifico, fornisce le seguenti funzionalità:  
-      * *RegisterUser*: permette la registrazione dell’utente inserendo email, password e ticker.   
-      * *LoginUser*: permette all’utente di accedere fornendo email e password.  
-      * *UpdateUser*: permette all’utente di aggiornare il proprio ticker.  
-      * *DeleteUser*: permette all’utente di cancellare il proprio account.  
-      * *GetLatestValue*: permette all’utente di recuperare l’ultimo valore aggiornato relativo alla propria azione.  
-      * *GetAverageValue*: permette all’utente di ricevere la media dell’azione seguita su un numero di valori da lui specificato.   
-        * N.B: Nel caso in cui il numero inserito è maggiore delle occorrenze nel db relative a quel ticker viene restituita la media sul massimo numero di occorrenze possibili.
-![photo_2024-11-28_17-02-12](https://github.com/user-attachments/assets/0d7f3209-7253-4a6f-92a0-432432a1a07d)
+![image](https://github.com/user-attachments/assets/86b686c9-bccc-4b5c-b14b-04cb84727805)
 
 
+Per l’implementazione delle nuove funzionalità richieste sono stati utilizzati 3 nuovi container (custom): uno che gestisce sia la creazione dei topic che il recupero periodico dei metadati associati a questi (kafka-admin-container), uno per il componente *AlertSystem* (alert\_system\_container) ed uno per il componente *AlertNotifierSystem* (alert\_notifier\_container). 
 
-* **Client gRPC**
+Oltre a quelli discussi sopra, vi sono anche altri 4 container: uno per ZooKeeper e gli altri per i 3 broker kafka (uno ciascuno). Zookeeper è un servizio centrale per la gestione dei metadati e il coordinamento dei broker Kafka; infatti, si occupa di mantenere la configurazione del cluster e di gestire l'elezione del controller tra i broker. In altre parole, senza tale componente i 3 broker non formerebbero un cluster.
 
-  * **Dettagli Implementativi:**  
-    * La connessione col server viene stabilita solo se il server è disponibile, altrimenti il client tenta di riconnettersi periodicamente per un massimo di 20 tentativi, con un intervallo di 5 secondi tra i tentativi (questo meccanismo viene utilizzato anche nel caso in cui la connessione viene persa dopo che questa era stata stabilita) e tale  comportamento è gestito dalla funzione wait\_for\_server()*.*   
-      * Se la connessione viene persa durante una richiesta, il client tenta di riconnettersi e, in caso di successo, la ritrasmette.  
-    * Per ogni funzione viene utilizzato un meccanismo di *timeout e retry*. Ovvero, ogni richiesta ha un timeout di 2 secondi dopo i quali, se la risposta non arriva, la chiamata scade: in questo caso (e nel caso in cui il server è offline) il client tenta di eseguire nuovamente la richiesta fino al numero massimo di tentativi (20).  
-    * Il client presenta all'utente 2 menu principali:  
-      * Menu di inizializzazione (quando l'utente non è loggato): permette all'utente di registrarsi o effettuare il login.  
-      * Menu dell'utente loggato: offre le funzionalità per aggiornare il suo ticker, cancellare il suo account, ottenere l'ultimo valore disponibile o la media degli X ultimi valori per l’azione da lui seguita.
+Si è scelto di isolare le funzionalità di amministrazione di Kafka in un container dedicato per garantire il principio di separazione delle responsabilità, mantenendo chiara la distinzione tra le operazioni di gestione del cluster Kafka e le altre componenti del sistema. Si è, inoltre, deciso di implementare un unico container (anziché suddividerlo in due), poiché la creazione di topic e il recupero dei metadati sono operazioni strettamente correlate tra loro e condividono la stessa logica di interazione con il cluster Kafka.
 
-* **Data Collector**
+Per quanto riguarda, invece, l’integrazione del pattern Command Query Responsibility Segregation, è stata adottata una strategia che separa nettamente i due aspetti fondamentali della gestione del sistema: tutti i *command* sono stati collocati nel file “command\_service.py”, mentre le *queries* nel file “*query\_service.py*”. 
 
-  * **Dettagli Implementativi:**  
-    * Inserito, insieme al Circuit Breaker, all’interno del container “break\_collector\_container”.   
-    * Focus su quanto implementato:  
-      * Aggiornamento dei valori in uscita per i ticker: ad ogni ciclo per ognuno dei ticker recuperati dal database viene inserito nella tabella Data il valore in uscita recuperato da Yahoo\! Finance (convertito in euro).  
-      * Comportamento adattivo nella frequenza delle richieste: inizia con un ritmo rapido per poi rallentare (passa da 2 secondi ad 1 ora dopo 300 cicli). Ciò per garantire, da un lato, un funzionamento accettabile nel caso di un primo avvio (e quindi per garantire che i dati raccolti da Yahoo\! Finance siano, in quantità, sufficienti per testare le funzionalità offerte dal server), e, dall’altro lato, per far sì che, a regime, la funzionalità di recupero della media del valore di un’azione per un tot di valori sia significativa.  
-      * Limite per dati di uno stesso ticker: si garantisce che non si superi un limite massimo di occorrenze per ciascun ticker (200) attraverso l’eliminazione dei dati più vecchi. In particolare, se per un determinato ticker il numero di occorrenze supera il limite, viene eseguita una query che va a rimuovere l’occorrenza più vecchia.  
-      * Pulizia dati: I ticker non più seguiti dagli utenti vengono eliminati dal database per risparmiare spazio. Nello specifico, viene utilizzata una lista che memorizza i ticker elaborati nell'iterazione precedente che, ad ogni ciclo, viene confrontata con la lista dei ticker appena recuperati: per ogni ticker della prima lista che non è presente nella seconda viene effettuata una query che si occupa di eliminare le entry relative a tale ticker nella tabella Data.
+# **DETTAGLI IMPLEMENTATIVI:**
 
-  * **Interazioni:**  
-    * col DB, per recuperare i ticker degli utenti e per memorizzare o eliminare i dati recuperati da yf (mediante il Circuit Breaker)
-  ![IMG_3502](https://github.com/user-attachments/assets/4e19ceb5-27f1-45ed-b130-23bb0be5fab1)
-
-* **Circuit Breaker** (integrato nel DataCollector)
-
-  * **Dettagli Implementativi:**  
-    * Integrato come modulo nel Data Collector.  
-    * Quando il numero di errori consecutivi supera la soglia configurata (f\_threshold \= 3), il circuito passa allo stato OPEN: si resta in questo stato per 20 secondi. Dopodiché, il circuito entra in uno stato di HALF\_OPEN: se hanno successo 3 richieste **consecutive** passiamo allo stato CLOSED (diversamente, torniamo a OPEN). Tale scelta (vincolo della consecutività delle richieste eseguite con successo) è stata presa con lo scopo di conferire al sistema maggiore robustezza.
-
-  * **Interazioni:**  
-    * Gestisce l’interazione del Data Collector con l’API esterna.
-
-* **Database** (MySQL)
-
-  * **Dettagli Implementativi:**  
-    * Inserito nel container “mysql\_container”.  
-    * Consiste in 2 tabelle:
-
-      * **Users**: ![Immagine 2024-11-28 172550](https://github.com/user-attachments/assets/f7eedf1b-9bb2-48d4-a4ee-285101fdef28)
+* **CQRS**  
+  * Due classi, *CommandService* e *QueryService*, gestiscono rispettivamente le operazioni di scrittura e lettura, centralizzando le logiche operative.   
+    * In alcuni casi, il  *command* include controlli di validazione per garantire che i dati siano coerenti prima di interagire con il database. Ad esempio, abbiamo:  
+* La verifica della validità dell’email in RegisterUserCommand.  
+* Il controllo che il valore high\_value sia maggiore di low\_value (sia nel comando relativo all’operazione di registrazione del cliente che di modifica in un tempo successivo).  
+* La gestione di valori non inseriti nelle soglie (ovvero, sono impostate \-1 se non inserite, con le logiche di controllo del superamento delle soglie che dipendono da questa struttura di memorizzazione).  
+  * I *command* e le *query,* inoltre, contengono la logica di creazione della query SQL che viene poi eseguita dagli handler delle classi CommandService e QueryService.
+   ![image](https://github.com/user-attachments/assets/b46030d1-ee84-4ef0-8ab7-880660e7d61b)
 
 
-        * Da evidenziare che  il salvataggio della password nel database (in fase di registrazione) avviene, per questioni di sicurezza, attraverso l’hashing della stessa (eseguito lato server).
+            
 
-      * **Data**:
-     
-     
-        ![Immagine 2024-11-28 215622](https://github.com/user-attachments/assets/c3c63aa0-8f37-4fc8-a9d8-66ad20c2ff54)
+* **Sistema di notifica con Apache Kafka**
+![image](https://github.com/user-attachments/assets/e08c4599-0a46-4a19-9cbc-0ad8331252df)
 
 
-        * Non è stata esplicitamente definita una relazione tra le tabelle perché il valore in uscita di un’azione è lo stesso indipendentemente dall’utente che lo possiede; quindi, avremmo avuto inutilmente repliche ridondanti.
-
-  * **Interazioni:**  
-    * con il server gRPC.  
-    * con il Data Collector.
-   
-
+* **KafkaAdmin (management)**: Componente responsabile dell’inizializzazione del cluster kafka (creazione e configurazione dei topic) e del monitoraggio di quest’ultimo.  
+  * La funzione create\_topic permette la creazione dei topic “to-alert-system” e “to-notifier”. Entrambi i topic sono stati configurati con una sola partizione e un fattore di replica pari a tre. La scelta di utilizzare una sola partizione è legata allo scenario iniziale, in cui è presente un solo AlertSystem e un solo AlertNotifierSystem, rendendo superfluo un numero maggiore di partizioni. Tuttavia, qualora in futuro fosse necessario effettuare uno scale-out del sistema (ad esempio, replicando il numero di AlertSystem e AlertNotifierSystem), il numero di partizioni potrà essere aumentato di conseguenza per sfruttare il meccanismo dei competing consumers, consentendo l'invio delle email in parallelo a più utenti e migliorando così il throughput del sistema. Il fattore di replica è stato impostato a 3 per garantire una maggiore robustezza: utilizzando 3 broker Kafka, il sistema può continuare a funzionare correttamente anche in caso di indisponibilità di uno o due broker.  
+    * La funzione get\_metadata permette di monitorare il funzionamento del cluster Kafka. Ogni 2 minuti, vengono recuperati e stampati i seguenti metadati:  
+      * Informazioni sui broker: ID, host e porta di ciascun broker nel cluster.  
+        * Informazioni sui topic: per ogni topic, vengono riportati l'ID delle partizioni, il broker leader, le repliche e le repliche In-Sync (ISR).
 
 
+    * **Configurazione dei Producer:**
+
+      * **Data Collector**: Dopo ogni ciclo di aggiornamento, produce un messaggio su Kafka (topic to-alert-system) contenente un timestamp (il contenuto del messaggio non ha un valore intrinseco, ma serve solo a “svegliare” il consumer sottoscritto al topic in questione).
+
+      * **AlertSystem:** scrive sul topic to-notifier un messaggio contenente delle informazioni correlate all’utente da notificare tramite email; ovvero: email, ticker, valore del ticker, condizione di superamento e corpo dell’e-mail.  
+        * Dettagli implementativi:  
+          * Utilizzo del pattern Circuit Breaker per quanto concerne la comunicazione col server SMTP.  
+          * Meccanismo di blocco di email ridondanti: è stata utilizzata una cache che tiene traccia, per ogni email inviata, di 3 variabili: valore del ticker al momento dell’invio dell’email, condizione associata (‘higher’ o ‘lower’) e ticker (il simbolo, es: ‘AAPL’). Nello specifico, un’email viene mandata solo se almeno uno di questi 3 fattori varia.  
+            * In particolare, la logica di variazione del valore di un ticker, vista la leggera volatilità del mercato azionario, è stata progettata per evitare l'invio di notifiche per fluttuazioni insignificanti: un valore viene considerato significativo se cambia l'unità della parte intera, piuttosto che i decimali.  
+          * Batch di messaggi (piuttosto che singoli messaggi): A differenza del Data Collector, visto che l’interrogazione al database può restituire molti risultati, al fine di aumentare il throughput e diminuire l’utilizzo della larghezza di banda di rete utilizzata, è stato scelto di sfruttare la possibilità di Apache Kafka di accumulare più messaggi nel buffer del producer prima di inviarli al broker.
+
+      * Per quanto riguarda i **parametri di configurazione** sono stati impostati:  
+        * bootstrap.servers: “kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092”→ specifica l'elenco degli indirizzi dei broker Kafka (in questo caso, i container Docker kafka-broker-1, kafka-broker-2 e kafka-broker-3), utilizzando il DNS di Docker per la risoluzione dei nomi.  
+        * acks: ‘all’ →  garantisce che il broker leader restituisca un ack solo dopo aver scritto il messaggio su tutte le repliche In-Sync (ISR). Questo approccio massimizza l'affidabilità: se il broker leader dovesse fallire, le repliche avranno comunque una copia consistente del messaggio. Tuttavia, questa configurazione può aumentare leggermente la latenza.
 
 
-## File Per il Build e il deploy
-[Build&Deploy&Setup_info.pdf](https://github.com/user-attachments/files/17950628/Build.Deploy.Setup_info.pdf)
+        * linger.ms:   
+          * 0 → **configurazione utilizzata per il data collector:** I messaggi sono inviati immediatamente (non inviamo batch ma singoli messaggi in quanto produce 1 solo messaggio per ciclo).  
+          * 500 \-\> **configurazione utilizzata per l’alert system:** aspetta 500ms prima di inviare i messaggi al broker, in questo modo si formano batch di messaggi.  
+        * max.in.flight.requests.per.connection: 1 → non vogliamo più richieste simultanee da parte del producer verso il broker perchè prediligiamo l’affidabilità e la coerenza temporale.  
+        * retries: 3 → tenterà di inviare il messaggio fino a tre volte prima di fallire definitivamente. In combinazione al parametro precedente garantiamo resilienza (a scapito del throughput).
+
+    * **Configurazione dei Consumer:**
+
+      * **AlertSystem**: effettua la sottoscrizione al topic to-alert-system: ogni messaggio rappresenta una notifica che i dati nel database sono stati aggiornati.   
+        * Si occupa, inoltre, di interrogare il database per identificare i ticker i cui valori hanno oltrepassato le soglie indicate dagli utenti. Include anche la logica per capire quali delle due (high\_value o low\_value) è stata superata, se entrambe presenti.
+
+      * **AlertNotifierSystem:** effettua la sottoscrizione al topic to-notifier: ogni messaggio rappresenta il contenuto dell’email da inviare all’utente nel caso in cui si è verificata una certa condizione con una delle due soglie.   
+        * Elaborazione: all’interno del poll loop, abbiamo deciso di procedere con l’invio delle email al raggiungimento di una lunghezza del batch di 10\. Il commit viene effettuato solo alla fine dell’elaborazione di tutti i 10 messaggi in modo da evitare che vi siano perdite di messaggi (ovvero, preferiamo una eventuale duplicazione della mail in quanto è un’operazione idempotente) in caso di fault del consumer durante l’elaborazione del batch.  
+        * Gestione dei fallimenti temporanei del server SMTP: la chiamata al metodo call del Circuit Breaker (a cui viene passata la funzione send_email) è incapsulata all’interno di un ciclo while che esegue per un numero massimo di 5 volte se la connessione al server da errore. Questo perché si vuole evitare che errori temporanei impediscano l’invio delle email.
+
+      * Per quanto riguarda i **parametri di configurazione**:  
+        * bootstrap.servers: “kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092”→ specifica l'elenco degli indirizzi dei broker Kafka (in questo caso, i container Docker kafka-broker-1, kafka-broker-2 e kafka-broker-3), utilizzando il DNS di Docker per la risoluzione dei nomi.  
+        * group.id: ‘group1’→  definisce il gruppo al quale appartiene il consumer, questo permette di implementare il meccanismo dei competing consumer nel caso in cui si fossero usate più partizioni e fossero stati replicati i consumer.  
+        * auto.offset.reset: ‘earliest’ → per assicurare che, al momento della sottoscrizione a un topic, il consumer recuperi i messaggi dall'inizio della partizione. Questo è utile nei casi in cui il consumer non ha offset salvati o quando viene eseguita una rielezione. In alternativa, il valore latest farebbe leggere solo i nuovi messaggi prodotti dopo la sottoscrizione.  
+        * enable.auto.commit: False → in questo modo implementiamo il meccanismo di commit in modo customizzato, in particolare, in tutti i consumer si è scelto di *committare* solo successivamente all’elaborazione del messaggio in modo da prevenire il rischio di perdere messaggi (a scapito di eventuali duplicazioni in caso di riavvii del consumer).
+
+
+## File per il Build e il Deploy
+[Build&Deploy&Setup_info.pdf](https://github.com/user-attachments/files/18212758/Build.Deploy.Setup_info.pdf)
 
