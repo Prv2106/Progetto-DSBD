@@ -36,7 +36,7 @@ consumer_config = {
 producer_config = {
     'bootstrap.servers': ','.join(bootstrap_servers),  
     'acks': 'all',  
-    'linger.ms': 0,  # Tempo massimo che il produttore aspetta prima di inviare i messaggi nel buffer
+    'linger.ms': 500,  # Aspetta mezzo secondo per accumulare i messaggi in batch
     'compression.type': 'gzip',  # Compressione dei messaggi per ridurre la larghezza di banda
     'max.in.flight.requests.per.connection': 1,  # Numero massimo di richieste inviate senza risposta
     'retries': 3,  # Numero di tentativi di invio in caso di errore
@@ -121,7 +121,7 @@ def scan_database_and_notify():
     try:
         conn = pymysql.connect(**db_config.db_config)
         
-        service = query_service.QueryService()# Recupera i risultati delle query di selezione distinti per utenti
+        service = query_service.QueryService() # Recupera i risultati delle query di selezione distinti per utenti
         results = service.handle_get_distinct_users_values(query_service.GetDistinctUsersValuesQuery(conn))
         logger.info(f"\nRESULTS:\n {results}")
         # Elabora i risultati e invia notifiche per ogni profilo
