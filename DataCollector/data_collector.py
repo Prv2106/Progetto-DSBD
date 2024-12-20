@@ -71,7 +71,7 @@ def fetch_yfinance_data(ticker):
             
     except Exception as e:
         # Gestione di errori generici (es. problemi di rete, API non raggiungibile)
-        print(f"Errore critico durante l'elaborazione del ticker {ticker}: {e}")
+        logger.error(f"Errore critico durante l'elaborazione del ticker {ticker}: {e}")
         raise Exception(f"Errore, codice di errore: {e}") 
 
 
