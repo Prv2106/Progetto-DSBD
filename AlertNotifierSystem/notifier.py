@@ -166,7 +166,7 @@ def handle_msg(msg):
                             attempts_count +=1
                             
 
-                    # salvataggio in memoria dell'email per evitare email ridondanti
+                    # salvataggio in memoria dell'email per evitare (in futuro) email ridondanti
                     save_into_cache(email, value, condition_placeholder, ticker)
                 else:
                     logger.info(f"Notifier: l'email non è stata mandata perchè ridondante! email={email}, ticker={ticker}")
