@@ -62,8 +62,9 @@ class CircuitBreaker:
                     logger.info(f"circuit_breaker: t_count aggiornato -> {self.t_count}")
                     unreliable_service()    
                     result = func(*args) # se il servizio inaffidabile non solleva eccezioni viene eseguita la richiesta
-                ################# TEST #########################
-                else: # al di fuori della fase di test eseguiamo la richiesta verso yf
+                ################################################
+                
+                else: # al di fuori della fase di test eseguiamo la richiesta verso il servizio esterno
                     result = func(*args)
                         
 

@@ -30,10 +30,12 @@ consumer_config = {
     'bootstrap.servers': ','.join(bootstrap_servers), 
     'group.id': 'group1',  
     'auto.offset.reset': 'earliest',  
-    'enable.auto.commit': False  # Disabilita l'auto-commit degli offset
+    'enable.auto.commit': False,  # Disabilita l'auto-commit degli offset
 }
 
 in_topic = 'to-notifier' 
+
+received_messages = []  # Buffer per gestire i messaggi durante il processamento del batch
 
 
 # dizionario di dizionari che serve per evitare di mandare due o più email con lo stesso valore
@@ -89,6 +91,7 @@ def poll_loop():
     Funzione principale che ascolta i messaggi dal topic Kafka.
     Dopo aver elaborato correttamente ogni messaggio, il commit dell'offset viene eseguito manualmente.
     """
+
     logger.info("In attesa di messaggi dal topic 'to-notifier'...")
     try:
         while True:
@@ -104,28 +107,47 @@ def poll_loop():
                 logger.error(f"Errore del consumer: {msg.error()}")
                 continue
 
-            try:
-                # Parsing del messaggio ricevuto (decodifica da JSON)
-                data = json.loads(msg.value().decode('utf-8'))
-                email = data['email']
-                ticker = data['ticker']
-                condition = data['condition']
+            # gestiamo i batch di messaggi
+            handle_msg(msg)
 
-                condition_placeholder = data['condition_placeholder'] 
-                value = data['value']
+    except KeyboardInterrupt:
+        # Chiusura del consumer su interruzione manuale (Ctrl+C)
+        logger.info("Consumatore interrotto dall'utente.")
+    finally:
+        # Chiusura ordinata del consumer
+        consumer.close()
+
+
+
+
+def handle_msg(msg):
+    try:
+        # Parsing del messaggio ricevuto 
+        data = json.loads(msg.value().decode('utf-8'))
+        received_messages.append(data) 
+        logger.info(f"lunghezza del batch: {len(received_messages)}")
+
+
+        if len(received_messages) == 10:
+            for message in received_messages:
+                email = message['email']
+                ticker = message['ticker']
+                condition = message['condition']
+                condition_placeholder = message['condition_placeholder'] 
+                value = message['value']
 
                 logger.info(f"Notifier: messaggio ricevuto: email={email}, ticker={ticker}, condition={condition}")
                 logger.info(f"Dettagli messaggio: topic:{msg.topic()}, partizione:{msg.partition()}, offset:{msg.offset()}") 
 
                 # vediamo se possiamo procedere con l'invio della mail o questa è ridondante
                 ok = is_cache_outdated(email, value, condition_placeholder, ticker)
+                attempts_count = 0
                 if ok:
                     # Invio dell'email... creazione del contenuto dell'email
                     subject = f"Ticker: {ticker}"
                     body = f"{condition}!"
 
                     max_num_attempts = 5
-                    attempts_count = 0
                     while attempts_count < max_num_attempts:
                         try:
                             # qui è dove ci interfacciamo al servizio SMTP esterno (Mailo o Google)
@@ -142,40 +164,38 @@ def poll_loop():
                             # Altri tipi di eccezione (es. server fallisce)
                             logger.error(f"{e}")
                             attempts_count +=1
-                          
+                            
 
                     # salvataggio in memoria dell'email per evitare email ridondanti
                     save_into_cache(email, value, condition_placeholder, ticker)
                 else:
                     logger.info(f"Notifier: l'email non è stata mandata perchè ridondante! email={email}, ticker={ticker}")
 
-                # Commit manuale dell'offset dopo elaborazione riuscita
-                # asynchronous=False significa che il consumer aspetta che Kafka confermi che il commit dell'offset è stato completato prima di proseguire con l'elaborazione del prossimo messaggio
-                consumer.commit(asynchronous=False)
 
                 if attempts_count == 5:
-                    logger.info(f"Offset committato manualmente dopo elaborazione del messaggio (richiesta NON andata a buon fine)")
+                    logger.info(f"richiesta NON andata a buon fine (server SMTP non raggiungibile)")
                 else:
-                    logger.info(f"Offset committato manualmente dopo elaborazione del messaggio (richiesta eseguita con successo)")
+                    logger.info(f"richiesta eseguita con successo")
+
+            # reset del batch
+            received_messages.clear()
+
+            # Commit manuale dell'offset dopo elaborazione 
+            consumer.commit(asynchronous=False) # commit sincrono => il consumer aspetta che Kafka confermi che il commit dell'offset è stato completato prima di proseguire con l'elaborazione del prossimo messaggio
+            logger.info(f"Offset committato manualmente dopo elaborazione del batch")
 
 
-
-            except json.JSONDecodeError as e:
-                # Errore di parsing JSON
-                logger.error(f"Errore nel parsing del messaggio: {e}")
-            except KeyError as e:
-                # Errore per mancanza di campi nel messaggio JSON
-                logger.error(f"Messaggio malformato, manca il campo: {e}")
-            except Exception as e:
-                # Gestione generale degli errori
-                logger.error(f"Errore durante l'elaborazione del messaggio: {e}")
+    except json.JSONDecodeError as e:
+        # Errore di parsing JSON
+        logger.error(f"Errore nel parsing del messaggio: {e}")
+    except KeyError as e:
+        # Errore per mancanza di campi nel messaggio JSON
+        logger.error(f"Messaggio malformato, manca il campo: {e}")
+    except Exception as e:
+        # Gestione generale degli errori
+        logger.error(f"Errore durante l'elaborazione del messaggio: {e}")
     
-    except KeyboardInterrupt:
-        # Chiusura del consumer su interruzione manuale (Ctrl+C)
-        logger.info("Consumatore interrotto dall'utente.")
-    finally:
-        # Chiusura ordinata del consumer
-        consumer.close()
+    
 
 
 def send_email(to_email, subject, body):
@@ -199,6 +219,7 @@ def send_email(to_email, subject, body):
             server.sendmail(email_config.email, to_email, msg.as_string())  # Invio del messaggio
     except Exception as e:
         logger.error(f"Errore durante l'invio dell'email: {e}")
+        raise Exception(f"Errore, codice di errore: {e}") 
 
 
 if __name__ == "__main__":      
