@@ -121,7 +121,7 @@ def scan_database_and_notify():
     try:
         conn = pymysql.connect(**db_config.db_config)
         
-        service = query_service.QueryService()# Recupera i risultati delle query di selezione distinti per utenti
+        service = query_service.QueryService() # Recupera i risultati delle query di selezione distinti per utenti
         results = service.handle_get_distinct_users_values(query_service.GetDistinctUsersValuesQuery(conn))
         logger.info(f"\nRESULTS:\n {results}")
         # Elabora i risultati e invia notifiche per ogni profilo
