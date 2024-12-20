@@ -35,7 +35,8 @@ Per quanto riguarda, invece, l’integrazione del pattern Command Query Responsi
 * Il controllo che il valore high\_value sia maggiore di low\_value (sia nel comando relativo all’operazione di registrazione del cliente che di modifica in un tempo successivo).  
 * La gestione di valori non inseriti nelle soglie (ovvero, sono impostate \-1 se non inserite, con le logiche di controllo del superamento delle soglie che dipendono da questa struttura di memorizzazione).  
   * I *command* e le *query,* inoltre, contengono la logica di creazione della query SQL che viene poi eseguita dagli handler delle classi CommandService e QueryService.
-   ![image](https://github.com/user-attachments/assets/b46030d1-ee84-4ef0-8ab7-880660e7d61b)
+
+![image](https://github.com/user-attachments/assets/b46030d1-ee84-4ef0-8ab7-880660e7d61b)
 
 
             
