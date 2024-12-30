@@ -1,0 +1,38 @@
+# AlertSystem Deployment
+apiVersion: apps/v1
+kind: Deployment
+
+metadata: 
+  name: alert-system-deployment
+  labels: 
+    app: alert-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels: 
+      app: alert-system
+  template: 
+    metadata:
+      labels: 
+        app: alert-system
+    spec:
+      containers:
+        - name: alert-system-container
+          image: mygiuseppe09/alert-system:v1
+      initContainers:
+        - name: init-container
+          image: busybox
+          command:
+            - "sh"
+            - "-c"
+            - |
+              # Tentativo di connessione ai 3 Kafka brokers. Si esegue fino a che non si connette ad uno di essi
+              for broker in "kafka-broker-1-service:9092" "kafka-broker-2-service:9092" "kafka-broker-3-service:9092"; do
+                echo "Trying to connect to $broker..."
+                until nc -zv $broker; do
+                  echo "Waiting for $broker to be available..."
+                  sleep 2
+                done
+                echo "$broker is now available!"
+                break
+              done

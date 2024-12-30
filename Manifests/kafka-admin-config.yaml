@@ -1,0 +1,38 @@
+# Kafka-admin Deployment
+apiVersion: apps/v1
+kind: Deployment
+
+metadata: 
+  name: kafka-admin-deployment
+  labels: 
+    app: kafka-admin
+spec:
+  replicas: 1
+  selector:
+    matchLabels: 
+      app: kafka-admin
+  template: 
+    metadata:
+      labels:
+        app: kafka-admin
+    spec:
+      initContainers:
+        - name: init-container
+          image: busybox
+          command:
+            - "sh"
+            - "-c"
+            - |
+              # Tentativo di connessione ai 3 Kafka brokers. Si esegue fino a che non si connette ad uno di essi
+              for broker in "kafka-broker-1-service:9092" "kafka-broker-2-service:9092" "kafka-broker-3-service:9092"; do
+                echo "Trying to connect to $broker..."
+                until nc -zv $broker; do
+                  echo "Waiting for $broker to be available..."
+                  sleep 2
+                done
+                echo "$broker is now available!"
+                break
+              done
+      containers:
+        - name: kafka-admin-container
+          image: mygiuseppe09/kafka-admin-image:v1

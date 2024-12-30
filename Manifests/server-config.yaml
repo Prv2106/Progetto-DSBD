@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 
@@ -16,6 +17,10 @@ spec:
       labels:
         app: server
     spec: 
+      initContainers:
+        - name: init-container
+          image: busybox
+          command: ['sh', '-c', 'until nc -zv mysql-container 3306; do echo "Waiting for zookeeper..."; sleep 2; done']
       containers:
         - name: grpc-server-container
           image: alberto2106/server-grpc:v1

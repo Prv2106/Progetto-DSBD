@@ -34,6 +34,7 @@ kind: PersistentVolume
 metadata:
   name: mysql-pv
 spec:
+  storageClassName: standard
   capacity:
     storage: 5Gi
   accessModes:
@@ -49,11 +50,13 @@ kind: PersistentVolumeClaim
 metadata:
   name: mysql-pvc
 spec:
+  storageClassName: standard
   accessModes:
     - ReadWriteOnce  # Permette l'accesso in lettura e scrittura a un solo nodo
   resources:
     requests:
       storage: 5Gi  # Dimensione dello spazio richiesto
+  volumeName: mysql-pv 
 
 --- 
 
