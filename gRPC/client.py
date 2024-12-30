@@ -456,7 +456,7 @@ def run():
     global email
     # Connessione al server gRPC in ascolto sulla porta 50051
     # Cambiare l'indirizzo opportunamente (con quello generato da minikube per il tunnel)
-    with grpc.insecure_channel('127.0.0.1:55552') as channel:
+    with grpc.insecure_channel('127.0.0.1:57004') as channel:
 
         # Attende che il server sia disponibile
         wait_for_server(channel)

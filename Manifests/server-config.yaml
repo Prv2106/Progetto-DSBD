@@ -21,3 +21,24 @@ spec:
           image: alberto2106/server-grpc:v1
           ports:
             - containerPort: 50051
+
+
+---
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: grpc-server-service
+  labels:
+    app: server
+
+spec:
+  type: NodePort
+  selector: # Si abbina ai Pod usando le stesse label del Deployment
+    app: server
+  ports:
+    - name: grpc-port 
+      protocol: TCP
+      port: 50051       # Porta del service (internamente visibile ai client)
+      targetPort: 50051 # Porta dal container del Pod
+      nodePort: 30051   # Porta del nodo (esterna al cluster)
