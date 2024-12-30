@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata: # qui indichiamo i nomi e i labels associati al'oggetto Deploy
+  name: server-deployment
+  labels:
+    app: server
+
+spec: 
+  replicas: 1
+  selector: # sotto vi sono i POD che verranno gestiti dal Deployment
+    matchLabels: 
+      app: server
+  template: # modello a partire dal quale vengono creati i POD
+    metadata: 
+      labels:
+        app: server
+    spec: 
+      containers:
+        - name: grpc-server-container
+          image: alberto2106/server-grpc:v1
+          ports:
+            - containerPort: 50051
