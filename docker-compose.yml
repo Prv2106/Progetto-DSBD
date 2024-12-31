@@ -118,7 +118,7 @@ services:
       - kafka-admin
     networks:
       - net2
-    container_name: break_collector_container
+    container_name: data-collector-service
     restart: always
 
   alert-system:
@@ -145,6 +145,21 @@ services:
     restart: always
 
 
+  ################## PROMETHEUS ##########################
+  prometheus:
+    build:
+      context: ./Prometheus
+      dockerfile: dockerfile-prometheus
+    networks:
+      - net2
+    volumes:
+      - prometheus-data:/prometheus  # Volume persistente per i dati di Prometheus
+    container_name: prometheus-service
+    ports: 
+      - 53120:9090
+
+
+
 networks:
   net1:
     driver: bridge
@@ -159,4 +174,6 @@ volumes:
   kafka_broker_2_data:
     driver: local
   kafka_broker_3_data:
+    driver: local
+  prometheus-data:
     driver: local

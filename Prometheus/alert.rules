@@ -1,0 +1,31 @@
+groups:
+- name: example
+
+  rules:
+
+  - alert: service_down   # nome associato all'allerta
+    expr: up == 0         # condizione che attiva l'avviso -> up è una METRICA che indica se un target è attivo (1) o inattivo (0)
+    for: 30s              # L'allerta passa dallo stato 'pending' a 'firing' solo se la condizione rimane vera per almeno 30 secondi.
+    labels:               # Etichette associate all'allerta
+      severity: page      
+    annotations:          # Informazioni aggiuntive
+      summary: "Instance {{ $labels.instance }} down"
+      description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 30 seconds."
+
+  - alert: high_load
+    expr: node_load1 > 0.8
+    for: 30s
+    labels:
+      severity: page
+    annotations:
+      summary: "Instance {{ $labels.instance }} under high load"
+      description: "{{ $labels.instance }} of job {{ $labels.job }} is under high load."
+
+  - alert: site_down
+    expr: probe_success < 1
+    for: 30s
+    labels:
+      severity: page
+    annotations:
+      summary: "Site Down: {{$labels.instance}}"
+      description: "Site Down: {{$labels.instance}} for more than 30 seconds"

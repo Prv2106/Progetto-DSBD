@@ -11,6 +11,7 @@ import db_config
 import json
 from confluent_kafka import Producer
 from create_topic import bootstrap_servers
+import metrics
 
 
 tz = pytz.timezone('Europe/Rome') 
@@ -66,6 +67,9 @@ def fetch_yfinance_data(ticker):
         # Cambio USD-EUR
         usd_to_eur_rate = 0.9
         closing_price_eur = closing_price_usd * usd_to_eur_rate
+
+        # --> aggiorniamo la metrica relativa al numero di richieste verso yahoo finance
+        metrics.request_to_yf.labels(uservice="data-collector").inc()
             
         return closing_price_eur
             
@@ -144,6 +148,9 @@ def data_collector():
                 # Aggiorna last_tickers con la lista attuale
                 last_tickers = tickers[:]
 
+                # --> settiamo la metrica
+                metrics.monitored_tickers.labels(uservice="data-collector").set(len(last_tickers))
+
 
                 ############### Inserimento degli ultimi valori per i ticker
                 for ticker in tickers:
@@ -203,6 +210,10 @@ def data_collector():
 
 
 if __name__ == "__main__":
+    # Start the Prometheus HTTP server on port 9999
+    metrics.prometheus_client.start_http_server(9999)
+    print(f"Le metriche Proimetheus sono disponibili all'indirizzo: http://{metrics.HOSTNAME}:9999/metrics")
+
     logger.info("data_collector: start...")
     time.sleep(30)
     producer = Producer(producer_config)
