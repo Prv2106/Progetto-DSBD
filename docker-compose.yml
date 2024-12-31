@@ -10,7 +10,7 @@ services:
       - net2
     volumes:
       - db_vol:/var/lib/mysql
-    container_name: mysql_container
+    container_name: mysql-container
 
   server-grpc:
     build:
@@ -20,14 +20,14 @@ services:
       - db
     networks:
       - net1
-    container_name: grpc_server_container
+    container_name: grpc-server-service
     ports:
       - "50051:50051"
     restart: always
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
-    container_name: zookeeper_container
+    container_name: zookeeper-service
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -39,14 +39,14 @@ services:
   ###### 3 broker di Kafka ######
   kafka-broker-1:
     image: confluentinc/cp-kafka:latest
-    container_name: kafka-broker-1
+    container_name: kafka-broker-1-service
     depends_on:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-service:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-1:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-1-service:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
@@ -58,14 +58,14 @@ services:
 
   kafka-broker-2:
     image: confluentinc/cp-kafka:latest
-    container_name: kafka-broker-2
+    container_name: kafka-broker-2-service
     depends_on:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 2
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-service:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-2:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-2-service:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_LISTENER_NAME: PLAINTEXT  
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
@@ -77,14 +77,14 @@ services:
 
   kafka-broker-3:
     image: confluentinc/cp-kafka:latest
-    container_name: kafka-broker-3
+    container_name: kafka-broker-3-service
     depends_on:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 3
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-service:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-3:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-3-service:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
