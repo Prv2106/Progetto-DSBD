@@ -2,7 +2,7 @@ FROM prom/prometheus:v2.0.0
 
 # file di configurazione (prometheus.yml e alert.rules)
 COPY config.yml /etc/prometheus/config.yml
-COPY alert.rules /etc/prometheus/alert.rules
+COPY alert_rules.yaml /etc/prometheus/alert.rules
 
 # Comando per avviare Prometheus con i file di configurazione
 CMD ["--config.file=/etc/prometheus/config.yml", \

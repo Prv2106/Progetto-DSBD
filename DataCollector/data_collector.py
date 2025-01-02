@@ -26,7 +26,6 @@ circuit_breaker = CircuitBreaker(f_threshold = 3, r_timeout= 20)
 maximum_occurrences = 200 # numero max di entry nella tabella Data per ciascun ticker
 last_tickers = [] # lista dei ticker recuperati all'iterazione precedente
 
-start_time = 0 # variabile utilizzata per monitorare la latenza dei messaggi prodotti
 
 # configurazione produttore
 producer_config = {
@@ -37,7 +36,6 @@ producer_config = {
     'max.in.flight.requests.per.connection': 1,  
     'retries': 3 ,
 }  
-
 
 out_topic = 'to-alert-system'  
 
@@ -92,12 +90,14 @@ def fetch_ticker_from_db(conn):
         logger.error(f"data_collector: Errore durante il recupero dei ticker dal db, codice di errore: {e}")
         return []
 
-def delivery_report(err, msg):
-    end_time = time.time()  # Tempo finale
+def delivery_report(err, msg, start_time):
+    end_time = time.perf_counter()  # Tempo finale
     if err is not None:
         logger.error(f"delivery_report: Errore nella consegna del messaggio: {err}")
     else:
-        latency = end_time - msg.timestamp()[1] / 1000  # Calcola latenza in secondi
+        latency = end_time - start_time  # Calcola latenza in secondi
+        # --> settiamo la metrica
+        metrics.production_latency.labels(uservice=metrics.APP_NAME).set(latency)
         logger.info(f"delivery_report: Messaggio consegnato con successo al topic {msg.topic()} "
                     f"nella partizione {msg.partition()} con latenza {latency:.3f}s")
 
@@ -149,7 +149,7 @@ def data_collector():
                 last_tickers = tickers[:]
 
                 # --> settiamo la metrica
-                metrics.monitored_tickers.labels(uservice="data-collector").set(len(last_tickers))
+                metrics.monitored_tickers.labels(uservice=metrics.APP_NAME).set(len(last_tickers))
 
 
                 ############### Inserimento degli ultimi valori per i ticker
@@ -193,8 +193,8 @@ def data_collector():
                 
                 
                 # Produciamo il messaggio per Kafka
-                start_time = time.time()  # Tempo iniziale
-                producer.produce(out_topic, json.dumps(f"database aggiornato: {datetime.now(tz)}"), callback=delivery_report)
+                start_time = time.perf_counter()  # Tempo iniziale
+                producer.produce(out_topic, json.dumps(f"database aggiornato: {datetime.now(tz)}"), callback=lambda err, msg: delivery_report(err, msg, start_time))
                 producer.flush()  
                 logger.info(f"data_collector: Messaggio prodotto {datetime.now(tz)}")
                 
@@ -212,7 +212,8 @@ def data_collector():
 if __name__ == "__main__":
     # Start the Prometheus HTTP server on port 9999
     metrics.prometheus_client.start_http_server(9999)
-    print(f"Le metriche Proimetheus sono disponibili all'indirizzo: http://{metrics.HOSTNAME}:9999/metrics")
+    logger.info(f"Le metriche relative al Data Collector sono disponibili sull'interfaccia web di Prometheus")
+
 
     logger.info("data_collector: start...")
     time.sleep(30)

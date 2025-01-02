@@ -20,6 +20,7 @@ services:
       - db
     networks:
       - net1
+      - net2
     container_name: grpc-server-service
     ports:
       - "50051:50051"
