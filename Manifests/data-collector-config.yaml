@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: data-collector-container
-          image: mygiuseppe09/data-collector-image:v1
+          image: alberto2106/data-collector:v1
       initContainers:
         - name: init-container
           image: busybox
@@ -37,3 +37,18 @@ spec:
                 echo "$broker is now available!"
                 break
               done
+          ports:
+            - containerPort: 9999 # La porta su cui il data-collector espone le metriche 
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-collector-service
+spec:
+  selector:
+    app: data-collector
+  ports:
+    - protocol: TCP
+      port: 9999
+      targetPort: 9999
