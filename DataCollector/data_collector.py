@@ -67,7 +67,7 @@ def fetch_yfinance_data(ticker):
         closing_price_eur = closing_price_usd * usd_to_eur_rate
 
         # --> aggiorniamo la metrica relativa al numero di richieste verso yahoo finance
-        metrics.request_to_yf.labels(uservice="data-collector").inc()
+        metrics.request_to_yf.labels(uservice="data-collector", hostname=metrics.HOSTNAME).inc()
             
         return closing_price_eur
             
@@ -97,7 +97,7 @@ def delivery_report(err, msg, start_time):
     else:
         latency = end_time - start_time  # Calcola latenza in secondi
         # --> settiamo la metrica
-        metrics.production_latency.labels(uservice=metrics.APP_NAME).set(latency)
+        metrics.production_latency.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(latency)
         logger.info(f"delivery_report: Messaggio consegnato con successo al topic {msg.topic()} "
                     f"nella partizione {msg.partition()} con latenza {latency:.3f}s")
 
@@ -149,7 +149,7 @@ def data_collector():
                 last_tickers = tickers[:]
 
                 # --> settiamo la metrica
-                metrics.monitored_tickers.labels(uservice=metrics.APP_NAME).set(len(last_tickers))
+                metrics.monitored_tickers.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(len(last_tickers))
 
 
                 ############### Inserimento degli ultimi valori per i ticker
