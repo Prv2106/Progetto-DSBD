@@ -19,9 +19,8 @@ spec:
     spec: 
       initContainers:
         - name: init-container
-          image: busybox
-          command: ['sh', '-c', 'until nc -zv data-collector-service 9999; do echo "Waiting for services..."; sleep 2; done'] 
-          #command: ['sh', '-c', 'until nc -zv data-collector-service 9999 && nc -zv grpc-server-service 9999; do echo "Waiting for services..."; sleep 2; done'] 
+          image: busybox 
+          command: ['sh', '-c', 'until nc -zv data-collector-service 9999 && nc -zv grpc-server-service 9999; do echo "Waiting for services..."; sleep 2; done'] 
       containers:
         - name: prometheus-container
           image: alberto2106/prometheus:v1

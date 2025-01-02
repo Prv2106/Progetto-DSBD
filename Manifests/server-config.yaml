@@ -26,6 +26,7 @@ spec:
           image: alberto2106/server-grpc:v1
           ports:
             - containerPort: 50051
+            - containerPort: 9999
 
 
 ---
@@ -47,3 +48,7 @@ spec:
       port: 50051       # Porta del service (internamente visibile ai client)
       targetPort: 50051 # Porta dal container del Pod
       nodePort: 30051   # Porta del nodo (esterna al cluster)
+    - name: server-prometheus-port
+      protocol: TCP
+      port: 9999
+      targetPort: 9999
