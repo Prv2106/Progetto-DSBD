@@ -1,0 +1,8 @@
+FROM prom/alertmanager:v0.12.0
+
+# file di configurazione (prometheus.yml e alert.rules)
+COPY alert-manager-config.yaml /etc/alertmanager/config.yml
+
+# Comando per avviare Prometheus con i file di configurazione
+CMD ["--config.file=/etc/alertmanager/config.yml", \
+     "--storage.path=/alertmanager"]

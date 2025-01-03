@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: data-collector-container
-          image: alberto2106/data-collector:v1
+          image: mygiuseppe09/data-collector-image:v1
       initContainers:
         - name: init-container
           image: busybox

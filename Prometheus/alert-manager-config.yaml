@@ -1,20 +1,14 @@
+log_level: debug
+
 global:
   resolve_timeout: 10m
+  http_config:
+    tls_config:
+      insecure_skip_verify: true
 
 route:  # ogni avviso generato da Prometheus viene confrontato con le regole definite nella route per determinare quale receiver deve gestirlo.
   receiver: "email-notifications" # tutti gli avvisi verranno inviati al receiver chiamato 'pager'
   repeat_interval: 3h
-
-# TODO: 
-# Finire la config dei receivers
-# creare 2 account mailoo
-# rivedere le labels relative a kafka
-# sistemare qualche recording rules
-# vedere che manca
-# testare
-# scrivere build & deploy
-# scrivere relazioone
-# fare schemi
 
 receivers:
     - name: 'email-notifications'
@@ -23,6 +17,4 @@ receivers:
         from: "alertmanager@mailo.com"
         smarthost: "smtp.mailo.com:587"
         auth_password: "Progetto0921"
-        # auth_username
-      
-
+        auth_username: "alertmanager@mailo.com" 

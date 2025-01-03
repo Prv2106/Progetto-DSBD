@@ -98,7 +98,7 @@ kind: Deployment
 metadata:
   name: kafka-broker-1
   labels:
-    app: kafka
+    app: broker-1-deployment
 spec:
   replicas: 1
   selector:
@@ -151,7 +151,7 @@ kind: Deployment
 metadata:
   name: kafka-broker-2
   labels:
-    app: kafka
+    app: broker-2-deployment
 spec:
   replicas: 1
   selector:
@@ -204,7 +204,7 @@ kind: Deployment
 metadata:
   name: kafka-broker-3
   labels:
-    app: kafka
+    app: broker-3-deployment
 spec:
   replicas: 1
   selector:
