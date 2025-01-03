@@ -23,7 +23,7 @@ spec:
           command: ['sh', '-c', 'until nc -zv data-collector-service 9999 && nc -zv grpc-server-service 9999; do echo "Waiting for services..."; sleep 2; done'] 
       containers:
         - name: prometheus-container
-          image: mygiuseppe09/prometheus-image:v1
+          image: alberto2106/prometheus:v1 
           ports:
             - containerPort: 9090
           volumeMounts:

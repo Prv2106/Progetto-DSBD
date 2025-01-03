@@ -194,6 +194,7 @@ def data_collector():
                 
                 # Produciamo il messaggio per Kafka
                 start_time = time.perf_counter()  # Tempo iniziale
+                time.sleep(4) # per testare l'alert
                 producer.produce(out_topic, json.dumps(f"database aggiornato: {datetime.now(tz)}"), callback=lambda err, msg: delivery_report(err, msg, start_time))
                 producer.flush()  
                 logger.info(f"data_collector: Messaggio prodotto {datetime.now(tz)}")
