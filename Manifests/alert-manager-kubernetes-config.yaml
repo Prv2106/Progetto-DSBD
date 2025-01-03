@@ -19,7 +19,7 @@ spec:
     spec: 
       containers:
         - name: alert-manager-container
-          image: mygiuseppe09/alert-manager-image:v1
+          image: alberto2106/alert-manager:v1
           ports:
             - containerPort: 9093
           volumeMounts:
