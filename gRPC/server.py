@@ -173,7 +173,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         # time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(time.time() - start_time)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
@@ -238,7 +238,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(time.time() - start_time)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
@@ -280,7 +280,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(time.time() - start_time)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
@@ -324,7 +324,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(time.time() - start_time)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
     
 
@@ -371,7 +371,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(time.time() - start_time)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
@@ -427,7 +427,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(time.time() - start_time)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
@@ -475,7 +475,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(time.time() - start_time)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
@@ -523,7 +523,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(time.time() - start_time)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
@@ -565,7 +565,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(time.time() - start_time)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 

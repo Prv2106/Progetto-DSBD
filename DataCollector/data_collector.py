@@ -96,8 +96,8 @@ def delivery_report(err, msg, start_time):
         logger.error(f"delivery_report: Errore nella consegna del messaggio: {err}")
     else:
         latency = end_time - start_time  # Calcola latenza in secondi
-        # --> settiamo la metrica
-        metrics.production_latency.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(latency)
+        # --> osserviamo il valore della latenza
+        metrics.production_latency.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(latency)
         logger.info(f"delivery_report: Messaggio consegnato con successo al topic {msg.topic()} "
                     f"nella partizione {msg.partition()} con latenza {latency:.3f}s")
 

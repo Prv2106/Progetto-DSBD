@@ -1,5 +1,6 @@
 from prometheus_client import Counter
 from prometheus_client import Gauge
+from prometheus_client import Histogram
 import prometheus_client
 import socket   # Per ottenere dinamicamente il nome dell'host
 
@@ -10,10 +11,11 @@ APP_NAME = "server_exporter"
 #### ELENCO DELLE METRICHE ######
 
 # ➤ per le performance del sistema.
-response_time_seconds = Gauge(
+response_time_seconds = Histogram(
     'response_time_seconds',                                                                    # nome
-    'tempo (in secondi) che rappresenta il tempo di risposta del server per ogni richiesta',    # descrizione
-    ['uservice', 'hostname']                                                                    # chiavi per le labels (per le PromQL)
+    'Distribuzione della latenza di risposta del server per ogni richiesta',                    # descrizione
+    ['uservice', 'hostname'],
+    buckets=[0.1, 0.2, 0.5, 1.0, 2.0, 5.0]                                                                                                                                        # chiavi per le labels (per le PromQL)
 )
 
 # ➤ per monitorare l'efficacia della cache e garantire che non venga saturata.

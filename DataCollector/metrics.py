@@ -1,5 +1,6 @@
 from prometheus_client import Counter
 from prometheus_client import Gauge
+from prometheus_client import Histogram
 import prometheus_client
 import socket   # Per ottenere dinamicamente il nome dell'host
 
@@ -16,11 +17,12 @@ monitored_tickers = Gauge(
     ['uservice', 'hostname']                                         # chiavi per le labels (per le PromQL)
 )
 
-# ➤ utile per monitorare la latenza di produzione dei messaggi 
-production_latency = Gauge(
+# ➤ utile per monitorare la distribuzione della latenza di produzione dei messaggi
+production_latency = Histogram(
     'production_latency',                                             
-    'è la latenza di produzione del messaggio nel topic "to-alert-system"',             
-    ['uservice', 'hostname']                                                     
+    'Distribuzione della latenza di produzione del messaggio nel topic "to-alert-system"',             
+    ['uservice', 'hostname'],            
+    buckets=[0.1, 0.2, 0.5, 1.0, 2.0, 5.0]  # in secondi 
 )
 
 # ➤ utile come statistica per per monitorare il carico delle chiamate verso il servizio esterno
