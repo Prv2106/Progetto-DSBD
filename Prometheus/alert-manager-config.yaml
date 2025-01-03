@@ -1,20 +1,15 @@
-log_level: debug
-
 global:
-  resolve_timeout: 10m
-  http_config:
-    tls_config:
-      insecure_skip_verify: true
+  smtp_smarthost: "smtp.mailo.com:587"
+  smtp_from: "alertmanager@mailo.com"
+  smtp_auth_username: "alertmanager@mailo.com"
+  smtp_auth_password: "Progetto0921"
+  smtp_require_tls: false  # Disabilita l'obbligo di TLS
 
-route:  # ogni avviso generato da Prometheus viene confrontato con le regole definite nella route per determinare quale receiver deve gestirlo.
-  receiver: "email-notifications" # tutti gli avvisi verranno inviati al receiver chiamato 'pager'
+route:
+  receiver: "email-notifications"
   repeat_interval: 3h
 
 receivers:
-    - name: 'email-notifications'
-      email_configs:
+  - name: "email-notifications"
+    email_configs:
       - to: "test-esame@mailo.com"
-        from: "alertmanager@mailo.com"
-        smarthost: "smtp.mailo.com:587"
-        auth_password: "Progetto0921"
-        auth_username: "alertmanager@mailo.com" 
