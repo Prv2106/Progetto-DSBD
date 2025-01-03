@@ -18,12 +18,12 @@ rule_files:
 
 
 # Configurazione degli avvisi
-#alerting:
-#  alertmanagers:
-#  - scheme: http
-#    static_configs:
-#    - targets:
-#      - "alertmanager:9093"
+alerting:
+  alertmanagers:
+  - scheme: http
+    static_configs:
+    - targets:
+      - "alertmanager:9093"
 
 # Configurazione dei target di scraping:
 scrape_configs:

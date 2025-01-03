@@ -1,31 +1,44 @@
+# instance = indirizzo (IP + PORTA) della risorsa da cui Prometheus raccoglie la metrica
+
 groups:
-- name: example
-
+- name: server-metrics-alert
   rules:
-
-  - alert: service_down   # nome associato all'allerta
-    expr: up == 0         # condizione che attiva l'avviso -> up è una METRICA che indica se un target è attivo (1) o inattivo (0)
-    for: 30s              # L'allerta passa dallo stato 'pending' a 'firing' solo se la condizione rimane vera per almeno 30 secondi.
-    labels:               # Etichette associate all'allerta
-      severity: page      
-    annotations:          # Informazioni aggiuntive
-      summary: "Instance {{ $labels.instance }} down"
-      description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 30 seconds."
-
-  - alert: high_load
-    expr: node_load1 > 0.8
-    for: 30s
+  - alert: HighResponseTimePerRequest     # nome associato all'allerta
+    expr: response_time_seconds > 2       # condizione che attiva l'avviso -> up è una METRICA che indica se un target è attivo (1) o inattivo (0)
+    for: 0m                               # L'allerta passa dallo stato 'pending' a 'firing' solo se la condizione rimane vera per almeno 30 secondi.
+    labels:                               # Etichette associate all'allerta
+      severity: warning      
+    annotations:                          # Informazioni aggiuntive
+      summary: "Elevato tempo di riposta per una richiesta sull'hostname: {{ $labels.hostname}}."
+      description: "istanza: {{ $labels.instance }}, job: {{ $labels.job }} --> tempo di risposta maggiore di 2 secondi."
+    
+  - alert: LoginFailuresSpike
+    expr: increase(login_failures_total[5m]) > 50
+    for: 0m
     labels:
-      severity: page
+      severity: critical
     annotations:
-      summary: "Instance {{ $labels.instance }} under high load"
-      description: "{{ $labels.instance }} of job {{ $labels.job }} is under high load."
+      summary: "Picco di errori di login sull'hostname: {{ $labels.hostname }}"
+      description: "Più di 50 fallimenti sono stati individuati negli ultimi 5 minuti."
 
-  - alert: site_down
-    expr: probe_success < 1
-    for: 30s
+
+
+- name: data-collector-metrics-alert
+  rules:
+  - alert: DrasticDropInMonitoredTickers
+    expr: delta(monitored_tickers[5m]) < -2
+    for: 5m
     labels:
-      severity: page
+      severity: critical
     annotations:
-      summary: "Site Down: {{$labels.instance}}"
-      description: "Site Down: {{$labels.instance}} for more than 30 seconds"
+      summary: "Calo drastico di ticker monitorati in: {{ $labels.hostname }}"
+      description: "Il numero di tickers monitorati è calato di più di 2 ticker negli ultimi 5 minuti."
+
+  - alert: HighProductionLatency
+    expr: production_latency > 0.5
+    for: 0m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Alta latenza di produzione in: {{ $labels.hostname }}"
+      description: "La latenza di produzione del messaggio ha superato 500ms per più di 5 minuti. Consulta il produttore o il broker."

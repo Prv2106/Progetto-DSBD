@@ -29,5 +29,3 @@ request_to_yf = Counter(
     'numero totale di richieste verso yahoo finance', 
     ['uservice', 'hostname']
 )
-
-
