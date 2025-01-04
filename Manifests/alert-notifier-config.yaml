@@ -1,0 +1,38 @@
+# AlertNotifier Deployment
+apiVersion: apps/v1
+kind: Deployment
+
+metadata: 
+  name: alert-notifier-deployment
+  labels: 
+    app: notifier
+spec:
+  replicas: 1
+  selector:
+    matchLabels: 
+      app: notifier
+  template: 
+    metadata:
+      labels:
+        app: notifier
+    spec:
+      containers:
+        - name: alert-notifier-container
+          image: mygiuseppe09/alert-notifier:v1
+      initContainers:
+        - name: init-container
+          image: busybox
+          command:
+            - "sh"
+            - "-c"
+            - |
+              # Tentativo di connessione ai 3 Kafka brokers. Si esegue fino a che non si connette ad uno di essi
+              for broker in "kafka-broker-1-service:9092" "kafka-broker-2-service:9092" "kafka-broker-3-service:9092"; do
+                echo "Trying to connect to $broker..."
+                until nc -zv $broker; do
+                  echo "Waiting for $broker to be available..."
+                  sleep 2
+                done
+                echo "$broker is now available!"
+                break
+              done

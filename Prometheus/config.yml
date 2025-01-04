@@ -1,0 +1,38 @@
+# global config
+
+global:
+  scrape_interval: 15s # Prometheus raccoglierà i dati dai target ogni 30 secondi.
+  # lo 'scrape_timeout' è settato di default a 10s ...
+  #   -> è il tempo massimo che si aspetta per una risposta da un endpoint durante il processo di scraping.
+  evaluation_interval: 15s # Prometheus valuta le regole di ALERTING definite ogni 30 secondi.
+  
+
+  # Etichette aggiunte ai dati di time series o agli avvisi inviati a sistemi esterni (come Alertmanager).
+  external_labels:
+      monitor: 'DSBD'
+
+# carica e valuta le regole dai seguenti file ogni 'evaluation_interval' secondi.
+rule_files:
+  - 'alert_rules.yaml'
+
+
+
+# Configurazione degli avvisi
+alerting:
+  alertmanagers:
+  - scheme: http
+    static_configs:
+    - targets:
+      - alert-manager-service:9093
+
+# Configurazione dei target di scraping:
+scrape_configs:
+  - job_name: 'prometheus'   # Nome del "job" di scraping che viene aggiunto come etichetta job=<job_name> alle metriche raccolte.
+    scrape_interval: 15s     # Sovrascrive il valore globale 
+    metrics_path: '/metrics' # è il path dove potranno essere consulate le metriche raccolte (di default è questo comunque)
+                             # scheme: 'http' di default.
+    static_configs:
+         - targets:
+           - prometheus-service:9090              #  Prometheus stesso
+           - data-collector-service:9999          #  exporter custom (DataCollector)
+           - grpc-server-service:9999             #  exporter custom (Server)

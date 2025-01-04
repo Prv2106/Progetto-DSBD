@@ -6,7 +6,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-bootstrap_servers = ['kafka-broker-1:9092', 'kafka-broker-2:9092', 'kafka-broker-3:9092']
+bootstrap_servers = ['kafka-broker-1-service:9092', 'kafka-broker-2-service:9092', 'kafka-broker-3-service:9092']
 
 topic_list = ['to-alert-system', 'to-notifier']
 

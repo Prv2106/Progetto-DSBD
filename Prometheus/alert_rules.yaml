@@ -1,0 +1,44 @@
+# instance = indirizzo (IP + PORTA) della risorsa da cui Prometheus raccoglie la metrica
+
+groups:
+- name: server-metrics-alert
+  rules:
+  - alert: HighResponseTimePerRequest   # nome associato all'allerta
+    expr: histogram_quantile(0.8, rate(response_time_seconds_bucket[10m])) > 2  # condizione che attiva l'avviso 
+    for: 0m    # L'allerta passa dallo stato 'pending' a 'firing' solo se la condizione rimane vera per almeno...
+    labels:     # Etichette associate all'allerta
+      severity: warning      
+    annotations:                          # Informazioni aggiuntive
+      summary: "Elevato tempo di riposta per una richiesta sull'hostname: {{ $labels.hostname}}."
+      description: "L'80° percentile della latenza di risposta del server ha superato i 2 secondi negli ultimi 10 minuti."
+    
+  - alert: LoginFailuresSpike
+    expr: increase(login_failures_total[5m]) > 50
+    for: 0m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Picco di errori di login sull'hostname: {{ $labels.hostname }}"
+      description: "Più di 50 fallimenti sono stati individuati negli ultimi 5 minuti."
+
+
+
+- name: data-collector-metrics-alert
+  rules:
+  - alert: DrasticDropInMonitoredTickers
+    expr: delta(monitored_tickers[5m]) < -2
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Calo drastico di ticker monitorati in: {{ $labels.hostname }}"
+      description: "Il numero di tickers monitorati è calato di più di 2 ticker negli ultimi 5 minuti."
+
+  - alert: HighProductionLatency
+    expr: histogram_quantile(0.8, rate(production_latency_bucket[24h])) > 2
+    for: 0m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Alta latenza di produzione in: {{ $labels.hostname }}"
+      description: "description: L'80° percentile della latenza di produzione è attualmente superiore a 2 secondi, calcolato sulla base delle richieste nell'ultima finestra di 24 ore. Consulta il produttore o il broker se il problema persiste."

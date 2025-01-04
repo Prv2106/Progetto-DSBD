@@ -6,6 +6,7 @@ COPY DataCollector/requirements.txt .
 
 RUN pip install -r requirements.txt
 RUN pip install kafka-python
+RUN pip install prometheus_client
 
 
 COPY DataCollector/data_collector.py .
@@ -14,5 +15,6 @@ COPY CQRS/command_service.py .
 COPY CQRS/query_service.py .
 COPY DB/db_config.py .
 COPY KafkaAdmin/create_topic.py .
+COPY DataCollector/metrics.py .
 
 CMD ["python", "data_collector.py"]

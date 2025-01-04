@@ -1,0 +1,90 @@
+
+apiVersion: v1
+kind: PersistentVolumeClaim # Richiesta di spazio di storage da parte di un pod
+metadata:
+  name: zookeeper-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  volumeName: zookeeper-pv
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+
+apiVersion: v1
+kind: PersistentVolume # oggetto Kubernetes che fornisce storage persistente
+metadata:
+  name: zookeeper-pv
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce # il volume può essere montato (in scrittura e lettura) da un singolo pod alla volta.
+  persistentVolumeReclaimPolicy: Retain # ovvero, se viene eliminata la 'claim', comunque non viene eliminato
+  storageClassName: standard
+  hostPath:
+    path: /mnt/data/zookeeper # il volume è mappato su questa directory del nodo fisico
+
+# Notiamo che tra la 'claim' e volume non ci sono riferimenti espliciti; infatti,
+# il binding avviene in maniera 'automatica' con K8s (sulla base delle specifiche).
+# il bind tra un PersistentVolumeClaim (PVC) e un PersistentVolume (PV) viene effettuato 
+# una sola volta, al momento della creazione del PVC, e una volta stabilito, rimane 
+# invariato fino a quando il PVC non viene eliminato (o il volume non è disponibile).
+
+---
+
+# Zookeeper Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zookeeper
+  labels:
+    app: zookeeper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zookeeper
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+    spec:
+      containers:
+        - name: zookeeper
+          image: confluentinc/cp-zookeeper:latest
+          ports:
+            - containerPort: 2181
+          env:
+            - name: ZOOKEEPER_CLIENT_PORT
+              value: "2181"
+            - name: ZOOKEEPER_TICK_TIME # tempo tra i tick del server Zookeeper
+              value: "2000"
+          volumeMounts:
+            - name: zookeeper-data # nome che viene utilizzato all'interno del pod per riferirsi al volume
+              mountPath: /var/lib/zookeeper/data
+          securityContext: # permessi per poter accedere in scrittura nel volume
+            runAsUser: 0
+            runAsGroup: 0
+      volumes:
+        - name: zookeeper-data
+          persistentVolumeClaim:
+            claimName: zookeeper-pvc # nome della 'claim' dichiarata prima
+
+---
+
+# Zookeeper Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper-service
+spec:
+  ports:
+    - port: 2181
+      targetPort: 2181
+  selector:
+    app: zookeeper

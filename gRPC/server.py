@@ -10,6 +10,7 @@ import bcrypt
 import command_service
 import query_service
 import db_config
+import metrics
 
 
 
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 request_cache = {}  # dizionario di dizionari per consentire il controllo non soltanto sulla richiesta ma anche sull'utente
 cache_lock = Lock() # per gestire l'aggiornamento della cache in modo consistente (pool di thread)
+
 
 
 def extract_metadata(context):
@@ -74,6 +76,7 @@ def save_into_cache(request_id, user_id, response):
 
     # Log dello stato della cache
     logger.info(f"Cache aggiornata. Dimensione attuale: {len(request_cache)}")
+    metrics.cache_size.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(len(request_cache))
     logger.info(f"Contenuto della cache:\n {request_cache}")
 
     
@@ -114,6 +117,9 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
     # Funzione di registrazione degli utenti
     def RegisterUser(self, request, context):
+        start_time = time.time()
+        metrics.request_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
+
         logger.info("Funzione richiesta: RegisterUser")
         user_id, request_id = extract_metadata(context)
         
@@ -142,6 +148,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
             # Creazione della risposta di successo
             response = usermanagement_pb2.UserResponse(success=True, message="Utente registrato con successo!")
+            metrics.success_request.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
 
         except pymysql.MySQLError as err:
             # Gestione degli errori specifici del database
@@ -163,14 +170,18 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 
             # Memorizzazione della risposta nella cache
             save_into_cache(request_id, user_id, response)
-                
+
         # test per il timeout
-        time.sleep(4)
+        # time.sleep(4)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
     # Funzione per il login degli utenti
     def LoginUser(self, request, context):
+        start_time = time.time()
+        metrics.request_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
+
         logger.info("Funzione richiesta: LoginUser")
         user_id, request_id = extract_metadata(context)
 
@@ -195,6 +206,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
                 if hashed_password_db is None:
                     response = usermanagement_pb2.UserResponse(success=False, message="Email o password non corrette")
+                    metrics.login_failures_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
                 else:
                     if isinstance(hashed_password_db, str):
                             hashed_password_db = hashed_password_db.encode('utf-8')
@@ -202,15 +214,20 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                     # Confronto della password
                     if bcrypt.checkpw(request.password.encode('utf-8'), hashed_password_db):
                         response = usermanagement_pb2.UserResponse(success=True, message="Login effettuato con successo")
+                        metrics.success_request.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
                     else:
                         response = usermanagement_pb2.UserResponse(success=False, message="Email o password non corrette")
+                        metrics.login_failures_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
 
             except ValueError as e:
                 logger.error(f"Errore bcrypt, codice di errore: {e}")
                 response = usermanagement_pb2.UserResponse(success=False, message="Errore durante il controllo della password")
+                metrics.login_failures_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
+
             except pymysql.MySQLError as err:
                 logger.error(f"Errore nel database, codice di errore: {err}")
                 response = usermanagement_pb2.UserResponse(success=False, message=f"Errore database, codice di errore: {err}")
+                metrics.login_failures_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
 
             finally:
                 # Chiudiamo la connessione al database
@@ -221,11 +238,15 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             
         # test per il timeout
         #time.sleep(4)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
     # Funzione per l'aggiornamento del ticker seguito da un utente
     def UpdateUser(self, request, context):
+        start_time = time.time()
+        metrics.request_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
+
         logger.info("Funzione richiesta: UpdateUser")
         user_id, request_id = extract_metadata(context)
 
@@ -244,6 +265,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 service.handle_update_user_ticker(command_service.UpdateUserTickerCommand(request.new_ticker, request.email,conn))
                 
                 response = usermanagement_pb2.UserResponse(success=True, message="Ticker aggiornato con successo!")
+                metrics.success_request.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
 
             except pymysql.MySQLError as err:
                 logger.error(f"Errore nel database, codice di errore: {err}")
@@ -258,12 +280,16 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
 
     # Funzione di eliminazione dell'utente loggato
     def DeleteUser(self, request, context):
+        start_time = time.time()
+        metrics.request_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
+
         logger.info("Funzione richiesta: DeleteUser")
         user_id, request_id = extract_metadata(context)
 
@@ -282,6 +308,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 service.handle_delete_user(command_service.DeleteUserCommand(request.email,conn))
 
                 response = usermanagement_pb2.UserResponse(success=True, message="Eliminazione avvenuta con successo")
+                metrics.success_request.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
@@ -297,11 +324,15 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
     
 
     # Funzione di recupero dell'ultimo valore
     def GetLatestValue(self, request, context):
+        start_time = time.time()
+        metrics.request_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
+
         logger.info("Funzione GetLatestValue")
         user_id, request_id = extract_metadata(context)
 
@@ -324,6 +355,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                     timestamp, ticker, value = result
                     logger.info(f"timestamp: {timestamp}, ticker: {ticker}, value: {value}")
                     response = usermanagement_pb2.StockValueResponse(success = True, message = "Valore recuperato", timestamp = str(timestamp), ticker = ticker, value = float(value))
+                    metrics.success_request.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
@@ -339,11 +371,15 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
     # recupero della media degli X valori
     def GetAverageValue(self, request, context):
+        start_time = time.time()
+        metrics.request_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
+
         logger.info("Funzione richiesta: GetAverageValue")
         user_id, request_id = extract_metadata(context)
 
@@ -375,6 +411,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                         note_text = f" N.B: il valore inserito ({request.num_values}) è maggiore al massimo numero di valori presenti nel database ({count}), la media verrà calcolata per {count} valori"
 
                     response = usermanagement_pb2.AverageResponse(success=True, message=f"Media recuperata con successo {note_text}", ticker = ticker, average = float(average))
+                    metrics.success_request.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
 
             except pymysql.MySQLError as err:
                 # Log dell'errore SQL
@@ -390,14 +427,15 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
 
-
-
-
     def UpdateLowValue(self, request, context):
+        start_time = time.time()
+        metrics.request_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
+
         logger.info("Funzione richiesta: UpdateLowValue")
         user_id, request_id = extract_metadata(context)
 
@@ -420,6 +458,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 service.handle_update_low_value_by_user(command_service.UpdateLowValueByUserCommand(request.email, request.low_value, high_value,conn))
                 
                 response = usermanagement_pb2.UserResponse(success=True, message="low_value aggiornato con successo!")
+                metrics.success_request.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
 
             except pymysql.MySQLError as err:
                 logger.error(f"Errore nel database, codice di errore: {err}")
@@ -436,10 +475,14 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
     def UpdateHighValue(self, request, context):
+        start_time = time.time()
+        metrics.request_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
+
         logger.info("Funzione richiesta: UpdateHighValue")
         user_id, request_id = extract_metadata(context)
 
@@ -462,6 +505,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
                 service.handle_update_high_value_by_user(command_service.UpdateHighValueByUserCommand(request.email, request.high_value, low_value,conn))
                 
                 response = usermanagement_pb2.UserResponse(success=True, message="high_value aggiornato con successo!")
+                metrics.success_request.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
 
             except pymysql.MySQLError as err:
                 logger.error(f"Errore nel database, codice di errore: {err}")
@@ -479,10 +523,14 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
     def ShowDetails(self, request, context):
+        start_time = time.time()
+        metrics.request_total.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
+
         logger.info("Funzione richiesta: ShowDetails")
         user_id, request_id = extract_metadata(context)
 
@@ -493,14 +541,13 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             return result 
         else:
             try:
-                
-            
                 conn = pymysql.connect(**db_config.db_config)
                 
                 service = query_service.QueryService()
                 ticker,low_value,high_value = service.handle_get_user_details(query_service.GetUserDetailsQuery(request.email,conn))
             
                 response = usermanagement_pb2.DetailsResponse(success=True, ticker = ticker, low_value = low_value, high_value = high_value)
+                metrics.success_request.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).inc()
 
             except pymysql.MySQLError as err:
                 logger.error(f"Errore nel database, codice di errore: {err}")
@@ -518,6 +565,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
         return response
 
 
@@ -548,4 +596,6 @@ def serve():
 
 
 if __name__ == '__main__':
+    metrics.prometheus_client.start_http_server(9999) # per permettere a Prometheus a fare le richieste di Pull
+    logger.info(f"Le metriche relative al Server gRPC sono disponibili sull'interfaccia web di Prometheus")
     serve()

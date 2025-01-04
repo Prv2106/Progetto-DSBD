@@ -1,0 +1,95 @@
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata: # qui indichiamo i nomi e i labels associati al'oggetto Deploy
+  name: prometheus-deployment
+  labels:
+    app: prometheus
+
+spec: 
+  replicas: 1
+  selector: # sotto vi sono i POD che verranno gestiti dal Deployment
+    matchLabels: 
+      app: prometheus
+  template: # modello a partire dal quale vengono creati i POD
+    metadata: 
+      labels:
+        app: prometheus
+    spec: 
+      initContainers:
+        - name: init-container
+          image: busybox 
+          command: ['sh', '-c', 'until nc -zv data-collector-service 9999 && nc -zv grpc-server-service 9999; do echo "Waiting for services..."; sleep 2; done'] 
+      containers:
+        - name: prometheus-container
+          image: alberto2106/prometheus:v1 
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+          - name: prometheus-data-volume
+            mountPath: /prometheus # Monta il volume persistente
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+      volumes:
+      - name: prometheus-data-volume
+        persistentVolumeClaim:
+          claimName: prometheus-data-pvc
+
+
+---
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: prometheus-service
+  labels:
+    app: prometheus
+
+spec:
+  type: NodePort
+  selector: # Si abbina ai Pod usando le stesse label del Deployment
+    app: prometheus
+  ports:
+    - name: prometheus-ports
+      protocol: TCP
+      port: 9090       # Porta del service (internamente visibile ai client)
+      targetPort: 9090 # Porta dal container del Pod
+      nodePort: 30120   # Porta del nodo (esterna al cluster)
+
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: prometheus-data-pv
+  labels:
+    app: prometheus
+spec:
+  storageClassName: standard
+  capacity:
+    storage: 10Gi 
+  accessModes:
+    - ReadWriteOnce 
+  hostPath: # Usa lo storage locale del nodo 
+    path: /data/prometheus # Percorso sul nodo
+    type: DirectoryOrCreate
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data-pvc
+  labels:
+    app: prometheus
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  volumeName: prometheus-data-pv # Associamo il PVC al PV specifico (sopra)

@@ -1,0 +1,15 @@
+global:
+  smtp_smarthost: "smtp.mailo.com:587"
+  smtp_from: "alertmanager@mailo.com"
+  smtp_auth_username: "alertmanager@mailo.com"
+  smtp_auth_password: "Progetto0921"
+  smtp_require_tls: false  # Disabilita l'obbligo di TLS
+
+route:
+  receiver: "email-notifications"
+  repeat_interval: 3h
+
+receivers:
+  - name: "email-notifications"
+    email_configs:
+      - to: "test-esame@mailo.com"

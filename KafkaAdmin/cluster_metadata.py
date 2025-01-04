@@ -60,10 +60,6 @@ def get_metadata():
         
 
 if __name__ == "__main__":
-    
-    logger.info("Preparazione dell'admin... (L'operazione richide circa 30 secondi)")
-    time.sleep(30)
-    
     try:
         logger.info("Creazione dei topic (se non esistenti...)\n")
         ct.create_topic_if_not_exists(ct.topic_list, num_partitions=ct.num_partitions, replication_factor=ct.replication_factor)

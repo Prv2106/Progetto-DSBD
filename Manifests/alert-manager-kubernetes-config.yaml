@@ -1,0 +1,86 @@
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata: # qui indichiamo i nomi e i labels associati al'oggetto Deploy
+  name: alert-manager-deployment
+  labels:
+    app: alert-manager
+
+spec: 
+  replicas: 1
+  selector: 
+    matchLabels: 
+      app: alert-manager
+  template: # modello a partire dal quale vengono creati i POD
+    metadata: 
+      labels:
+        app: alert-manager
+    spec: 
+      containers:
+        - name: alert-manager-container
+          image: alberto2106/alert-manager:v1
+          ports:
+            - containerPort: 9093
+          volumeMounts:
+            - name: alert-manager-data-volume
+              mountPath: /alertmanager # Monta il volume persistente
+      volumes:
+        - name: alert-manager-data-volume
+          persistentVolumeClaim:
+            claimName: alert-manager-data-pvc
+
+---
+
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: alert-manager-service
+  labels:
+    app: alert-manager
+
+spec:
+  type: ClusterIP
+  selector: 
+    app: alert-manager
+  ports:
+    - name: alert-manager-port
+      protocol: TCP
+      port: 9093       # Porta del service (internamente visibile ai client)
+      targetPort: 9093 # Porta dal container del Pod
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: alert-manager-data-pv
+  labels:
+    app: alert-manager
+spec:
+  storageClassName: standard
+  capacity:
+    storage: 5Gi 
+  accessModes:
+    - ReadWriteOnce 
+  hostPath:
+    path: /data/alertmanager # Percorso sul nodo
+    type: DirectoryOrCreate
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: alert-manager-data-pvc
+  labels:
+    app: alert-manager
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  volumeName: alert-manager-data-pv 
