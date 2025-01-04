@@ -49,6 +49,8 @@ def save_into_cache(request_id, user_id, response):
     """
     Memorizza una risposta nella cache Redis e stampa il contenuto della cache.
     """
+    max_cache_size = 300  # Limite della cache
+
     try:
         # Converti l'oggetto gRPC in JSON
         serialized_response = MessageToJson(response)
@@ -61,9 +63,16 @@ def save_into_cache(request_id, user_id, response):
         cache_content = rdb.hgetall(request_id)
         logger.info(f"Contenuto attuale della cache per RequestID: {request_id}: {cache_content}")
 
-        # Recupera la dimensione totale della cache per il log
+        # dimensione attuale della cache
         total_keys = len(rdb.keys())
-        metrics.cache_size.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(total_keys)
+
+        if total_keys > max_cache_size:
+            oldest_key = sorted(rdb.keys())[0]  # Ordiniamo le chiavi e prendiamo la prima occorrenza
+            rdb.delete(oldest_key)
+            logger.info(f"Rimossa la chiave più vecchia: {oldest_key}")
+
+        metrics.cache_size.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(len(rdb.keys()))
+        
         logger.info(f"Cache Redis totale: {total_keys} chiavi memorizzate.")
 
     except Exception as e:
@@ -125,7 +134,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         logger.info("Funzione richiesta: RegisterUser")
         user_id, request_id = extract_metadata(context)
         
-        result = handle_request_cache(request_id, user_id) # vediamo se tale richiesta era già ricevuta dal server (presente nella cache)
+        result = handle_request_cache(request_id, user_id, usermanagement_pb2.UserResponse) # vediamo se tale richiesta era già ricevuta dal server (presente nella cache)
         if result: 
             # test per il timeout
             time.sleep(1)
@@ -188,7 +197,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         user_id, request_id = extract_metadata(context)
 
         
-        result = handle_request_cache(request_id, user_id) # vediamo se tale richiesta era già ricevuta dal server (presente nella cache)
+        result = handle_request_cache(request_id, user_id, usermanagement_pb2.UserResponse) # vediamo se tale richiesta era già ricevuta dal server (presente nella cache)
         if result:
             # test per il timeout
             #time.sleep(1)
@@ -252,7 +261,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         logger.info("Funzione richiesta: UpdateUser")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id)
+        result = handle_request_cache(request_id, user_id, usermanagement_pb2.UserResponse)
         if result:
             # test per il timeout
             #time.sleep(1)
@@ -295,7 +304,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         logger.info("Funzione richiesta: DeleteUser")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id)
+        result = handle_request_cache(request_id, user_id, usermanagement_pb2.UserResponse)
         if result:
             # test per il timeout
             #time.sleep(1)
@@ -338,7 +347,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         logger.info("Funzione GetLatestValue")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id)
+        result = handle_request_cache(request_id, user_id, usermanagement_pb2.UserResponse)
         if result:
             # test per il timeout
             #time.sleep(1)
@@ -385,7 +394,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         logger.info("Funzione richiesta: GetAverageValue")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id)
+        result = handle_request_cache(request_id, user_id, usermanagement_pb2.UserResponse)
         if result:
             # test per il timeout
             #time.sleep(1)
@@ -441,7 +450,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         logger.info("Funzione richiesta: UpdateLowValue")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id)
+        result = handle_request_cache(request_id, user_id, usermanagement_pb2.UserResponse)
         if result:
             # test per il timeout
             #time.sleep(1)
@@ -488,7 +497,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         logger.info("Funzione richiesta: UpdateHighValue")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id)
+        result = handle_request_cache(request_id, user_id, usermanagement_pb2.UserResponse)
         if result:
             # test per il timeout
             #time.sleep(1)
@@ -536,7 +545,7 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
         logger.info("Funzione richiesta: ShowDetails")
         user_id, request_id = extract_metadata(context)
 
-        result = handle_request_cache(request_id, user_id)
+        result = handle_request_cache(request_id, user_id, usermanagement_pb2.UserResponse)
         if result:
             # test per il timeout
             #time.sleep(1)
