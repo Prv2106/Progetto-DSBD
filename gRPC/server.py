@@ -63,6 +63,7 @@ def save_into_cache(request_id, user_id, response):
 
         # Recupera la dimensione totale della cache per il log
         total_keys = len(rdb.keys())
+        metrics.cache_size.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(total_keys)
         logger.info(f"Cache Redis totale: {total_keys} chiavi memorizzate.")
 
     except Exception as e:

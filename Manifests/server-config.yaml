@@ -23,7 +23,7 @@ spec:
           command: ['sh', '-c', 'until nc -zv mysql-container 3306; do echo "Waiting for zookeeper..."; sleep 2; done']
       containers:
         - name: grpc-server-container
-          image: alberto2106/server-grpc:v1
+          image: mygiuseppe09/server-grpc:v1
           ports:
             - containerPort: 50051
             - containerPort: 9999
