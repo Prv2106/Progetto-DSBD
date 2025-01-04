@@ -26,13 +26,13 @@ groups:
 - name: data-collector-metrics-alert
   rules:
   - alert: DrasticDropInMonitoredTickers
-    expr: delta(monitored_tickers[5m]) < -2
+    expr: delta(monitored_tickers[5m]) < -10
     for: 5m
     labels:
       severity: critical
     annotations:
       summary: "Calo drastico di ticker monitorati in: {{ $labels.hostname }}"
-      description: "Il numero di tickers monitorati è calato di più di 2 ticker negli ultimi 5 minuti."
+      description: "Il numero di tickers monitorati è calato di più di 10 ticker negli ultimi 5 minuti."
 
   - alert: HighProductionLatency
     expr: histogram_quantile(0.8, rate(production_latency_bucket[24h])) > 2
