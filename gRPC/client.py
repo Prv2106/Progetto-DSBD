@@ -2,6 +2,7 @@ import grpc
 import usermanagement_pb2
 import usermanagement_pb2_grpc
 import uuid
+import argparse
 import time
 
 max_attempts = 20 # numero massimo di tentativi di ritrasmissione
@@ -452,12 +453,14 @@ def wait_for_server(channel, retry_interval=5, max_retries=20):
     exit(1)  # Termina il programma
 
 
-def run():
+def run(port):
     global email
     # Connessione al server gRPC in ascolto sulla porta 50051
     # Cambiare l'indirizzo opportunamente (con quello generato da minikube per il tunnel).
     # NB: è il primo dei due endpoint restituiti da minikube service grpc-server-service --url
-    with grpc.insecure_channel('127.0.0.1:54920') as channel:
+    
+    server_endpoint = f'127.0.0.1:{port}'
+    with grpc.insecure_channel(server_endpoint) as channel:
 
         # Attende che il server sia disponibile
         wait_for_server(channel)
@@ -509,4 +512,9 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
+    parser = argparse.ArgumentParser(description="Client gRPC")
+    parser.add_argument('port', type=int, help="Numero della porta del server gRPC")
+    args = parser.parse_args()
+
+    # Chiama la funzione run passando la porta
+    run(args.port)
