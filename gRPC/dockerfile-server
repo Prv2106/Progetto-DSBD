@@ -7,6 +7,8 @@ RUN pip install pymysql
 RUN pip install bcrypt pymysql
 RUN pip install cryptography
 RUN pip install prometheus_client
+RUN pip install redis
+RUN pip install protobuf
 
 
 COPY gRPC/usermanagement_pb2.py gRPC/usermanagement_pb2_grpc.py gRPC/server.py /app/

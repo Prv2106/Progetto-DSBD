@@ -11,6 +11,8 @@ import command_service
 import query_service
 import db_config
 import metrics
+import redis
+from google.protobuf.json_format import MessageToJson
 
 
 
@@ -21,7 +23,49 @@ logger = logging.getLogger(__name__)
 request_cache = {}  # dizionario di dizionari per consentire il controllo non soltanto sulla richiesta ma anche sull'utente
 cache_lock = Lock() # per gestire l'aggiornamento della cache in modo consistente (pool di thread)
 
+# Configurazione di Redis
+rdb = redis.StrictRedis(host='redis', port=6379, db=0, decode_responses=True)
 
+
+def handle_request_cache(request_id, user_id, response_class):
+    """
+    Gestisce il recupero di una richiesta processata dalla cache Redis.
+    """
+    try:
+        cached_response = rdb.hget(request_id, user_id)
+        if cached_response:
+            logger.info(f"Richiesta trovata in cache per UserID: {user_id}")
+            
+            # Converti il JSON di nuovo in un oggetto gRPC
+            response = Parse(cached_response, response_class())
+            return response
+    except Exception as e:
+        logger.error(f"Errore durante il recupero o la deserializzazione della risposta: {e}")
+
+    return None
+
+def save_into_cache(request_id, user_id, response):
+    """
+    Memorizza una risposta nella cache Redis e stampa il contenuto della cache.
+    """
+    try:
+        # Converti l'oggetto gRPC in JSON
+        serialized_response = MessageToJson(response)
+
+        # Salva il JSON in Redis
+        rdb.hset(request_id, user_id, serialized_response)
+        logger.info(f"Cache Redis aggiornata per RequestID: {request_id}, UserID: {user_id}")
+
+        # Recupera e stampa il contenuto della cache per il request_id
+        cache_content = rdb.hgetall(request_id)
+        logger.info(f"Contenuto attuale della cache per RequestID: {request_id}: {cache_content}")
+
+        # Recupera la dimensione totale della cache per il log
+        total_keys = len(rdb.keys())
+        logger.info(f"Cache Redis totale: {total_keys} chiavi memorizzate.")
+
+    except Exception as e:
+        logger.error(f"Errore durante la serializzazione o memorizzazione della risposta in Redis: {e}")
 
 def extract_metadata(context):
     """
@@ -35,50 +79,6 @@ def extract_metadata(context):
     logger.info(f"Metadati ricevuti: UserId -> {user_id}, RequestID -> {request_id}")
     
     return user_id, request_id
-
-
-def handle_request_cache(request_id, user_id):
-    """
-    Gestisce (l'eventuale) recupero di una richiesta già processata dalla cache.
-    """
-    with cache_lock:
-        # Verifichiamo se la richiesta era stata già processata
-        if request_id in request_cache:
-            if user_id in request_cache[request_id]:
-                logger.info(f"Richiesta già elaborata per l'utente {user_id}")
-
-                # Ritorniamo la risposta già processata
-                return request_cache[request_id][user_id]
-    
-    # Nessuna risposta trovata nella cache
-    return None
-
-
-def save_into_cache(request_id, user_id, response):
-    """
-    Memorizza una risposta nella cache. Se la dimensione totale della cache supera il limite,
-    rimuove gli elementi più vecchi.
-    """
-    max_cache_size = 300  # Limite della cache
-
-    with cache_lock:
-        # Aggiungiamo la nuova risposta nella cache
-        if request_id not in request_cache:
-            request_cache[request_id] = {}
-
-        request_cache[request_id][user_id] = response
-
-        # Controlliamo la dimensione totale della cache
-        if len(request_cache) > max_cache_size:
-            # Rimuoviamo il primo elemento inserito (FIFO - First In, First Out)
-            oldest_request_id = next(iter(request_cache))
-            del request_cache[oldest_request_id]
-
-    # Log dello stato della cache
-    logger.info(f"Cache aggiornata. Dimensione attuale: {len(request_cache)}")
-    metrics.cache_size.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).set(len(request_cache))
-    logger.info(f"Contenuto della cache:\n {request_cache}")
-
     
 def populate_db():
     """

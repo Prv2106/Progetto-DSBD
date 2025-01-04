@@ -8,7 +8,7 @@ metadata: # qui indichiamo i nomi e i labels associati al'oggetto Deploy
     app: server
 
 spec: 
-  replicas: 1
+  replicas: 3
   selector: # sotto vi sono i POD che verranno gestiti dal Deployment
     matchLabels: 
       app: server
@@ -27,7 +27,6 @@ spec:
           ports:
             - containerPort: 50051
             - containerPort: 9999
-
 
 ---
 apiVersion: v1
