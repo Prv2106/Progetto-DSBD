@@ -35,10 +35,10 @@ groups:
       description: "Il numero di tickers monitorati è calato di più di 2 ticker negli ultimi 5 minuti."
 
   - alert: HighProductionLatency
-    expr: histogram_quantile(0.8, rate(production_latency_bucket[2m])) > 2
+    expr: histogram_quantile(0.8, rate(production_latency_bucket[24h])) > 2
     for: 0m
     labels:
       severity: critical
     annotations:
       summary: "Alta latenza di produzione in: {{ $labels.hostname }}"
-      description: "L'80° percentile della latenza di produzione ha superato i 2 secondi nell'ultimo giorno (24 ore). Consulta il produttore o il broker."
+      description: "description: L'80° percentile della latenza di produzione è attualmente superiore a 2 secondi, calcolato sulla base delle richieste nell'ultima finestra di 24 ore. Consulta il produttore o il broker se il problema persiste."
