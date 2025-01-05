@@ -94,5 +94,5 @@ Per quanto riguarda, invece, l’integrazione del pattern Command Query Responsi
 
 
 ## File per il Build e il Deploy
-[Build&Deploy&Setup_info.pdf](https://github.com/user-attachments/files/18212758/Build.Deploy.Setup_info.pdf)
+[Build&Deploy&Setup_info.pdf](https://github.com/user-attachments/files/18309928/Build.Deploy.Setup_info.pdf)
 
