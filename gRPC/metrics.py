@@ -14,7 +14,7 @@ APP_NAME = "server_exporter"
 response_time_seconds = Histogram(
     'response_time_seconds',                                                                    # nome
     'Distribuzione della latenza di risposta del server per ogni richiesta',                    # descrizione
-    ['uservice', 'hostname'],
+    ['uservice', 'hostname', 'function'],
     buckets=[0.1, 0.2, 0.5, 1.0, 2.0, 5.0]                                                                                                                                        # chiavi per le labels (per le PromQL)
 )
 

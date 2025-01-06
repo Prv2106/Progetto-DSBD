@@ -14,6 +14,7 @@ import metrics
 import redis
 from google.protobuf.json_format import MessageToJson
 from google.protobuf.json_format import Parse
+import inspect
 
 
 
@@ -184,7 +185,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         # time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
+        function_name = inspect.currentframe().f_code.co_name
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME, function = function_name).observe(time.time() - start_time)
         return response
 
 
@@ -249,7 +251,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
             
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
+        function_name = inspect.currentframe().f_code.co_name
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME, function = function_name).observe(time.time() - start_time)
         return response
 
 
@@ -291,7 +294,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
+        function_name = inspect.currentframe().f_code.co_name
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME, function = function_name).observe(time.time() - start_time)
         return response
 
 
@@ -335,7 +339,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
+        function_name = inspect.currentframe().f_code.co_name
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME, function = function_name).observe(time.time() - start_time)
         return response
     
 
@@ -382,7 +387,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
+        function_name = inspect.currentframe().f_code.co_name
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME, function = function_name).observe(time.time() - start_time)
         return response
 
 
@@ -438,7 +444,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
+        function_name = inspect.currentframe().f_code.co_name
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME, function = function_name).observe(time.time() - start_time)
         return response
 
 
@@ -486,7 +493,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
+        function_name = inspect.currentframe().f_code.co_name
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME, function = function_name).observe(time.time() - start_time)
         return response
 
 
@@ -534,7 +542,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
+        function_name = inspect.currentframe().f_code.co_name
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME, function = function_name).observe(time.time() - start_time)
         return response
 
 
@@ -576,7 +585,8 @@ class UserService(usermanagement_pb2_grpc.UserServiceServicer):
 
         # test per il timeout
         #time.sleep(4)
-        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME).observe(time.time() - start_time)
+        function_name = inspect.currentframe().f_code.co_name
+        metrics.response_time_seconds.labels(uservice=metrics.APP_NAME, hostname=metrics.HOSTNAME, function = function_name).observe(time.time() - start_time)
         return response
 
 
