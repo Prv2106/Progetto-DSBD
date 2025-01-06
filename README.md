@@ -1,98 +1,98 @@
-# **HOMEWORK 2 \- Distributed Systems and Big Data**  
+**HOMEWORK 3 \- Distributed Systems and Big Data**  
 **UniCT \- Anno Accademico 2024/2025**
 
 # **DESCRIZIONE DEL SISTEMA**
 
-Il progetto estende l'architettura esistente introducendo un nuovo modo di gestire l’interazione con il database (usando il pattern CQRS) e la notifica asincrona agli utenti. In particolare, gli utenti possono ora ricevere un'email ogni volta che il valore del loro ticker di interesse supera una soglia predefinita, sia al rialzo (high-value) che al ribasso (low-value). 
+Il progetto estende l'architettura esistente introducendo la migrazione a k8s, insieme ad un meccanismo di white-box monitoring con Prometheus per quanto riguarda i 2 microservizi Data Collector e gRPC Server. 
 
-Alla registrazione, l'utente può fornire uno o entrambi questi parametri, successivamente aggiornabili tramite apposite RPC.
+In particolare, il cluster Kubernetes è stato testato attraverso Minikube e consiste in un insieme di oggetti di tipo Deployment, Service, PersistentVolumeClaim e PersistentVolume.
 
-La nuova funzionalità di notifica asincrona si basa sull'integrazione di Apache Kafka. Nello specifico, la backbone di comunicazione è stata implementata con un cluster formato da 3 broker.
+Per quanto concerne il monitoraggio del Server, sono state scelte delle metriche che permettono l’analisi della latenza delle risposte, del carico totale, delle richieste completate con successo, dei tentativi di login falliti (per possibili problemi di sicurezza) e dell’efficacia della cache.  
+Per il Data Collector, invece, le metriche si focalizzano sul monitoraggio del numero dei ticker seguiti dagli utenti, sulla latenza nella produzione di messaggi verso il topic e sul carico di richieste verso il servizio esterno di Yahoo Finance.
 
-Un'ulteriore ottimizzazione è stata introdotta nella gestione delle soglie di notifica (high-value e low-value): per evitare notifiche ridondanti, il sistema tiene traccia delle condizioni precedenti, inviando un'email solo al verificarsi di una reale variazione di stato. Ciò è stato fatto con l’obiettivo di non avere delle email duplicate inviate all'utente, così da non inviare richieste inutili al servizio SMTP esterno e, quindi, così da garantire una maggiore efficienza complessiva del sistema.
-
-Infine, è stata riutilizzata l’implementazione custom del Circuit Breaker anche nell’AlertNotifierSystem.
+In aggiunta al monitoraggio delle metriche, è stato implementato il componente di Prometheus Alert Manager, configurato per inviare notifiche email in risposta a specifici eventi o soglie critiche. Questa scelta consente di garantire un monitoraggio proattivo del sistema, permettendo interventi tempestivi in caso di anomalie e migliorando la resilienza complessiva dell'infrastruttura.
 
 # **SCELTE PROGETTUALI**
+**![photo_2025-01-06_12-59-28](https://github.com/user-attachments/assets/6266ae11-1e20-47f5-89f5-09a37fa78156)**
 
-![image](https://github.com/user-attachments/assets/86b686c9-bccc-4b5c-b14b-04cb84727805)
 
 
-Per l’implementazione delle nuove funzionalità richieste sono stati utilizzati 3 nuovi container (custom): uno che gestisce sia la creazione dei topic che il recupero periodico dei metadati associati a questi (kafka-admin-container), uno per il componente *AlertSystem* (alert\_system\_container) ed uno per il componente *AlertNotifierSystem* (alert\_notifier\_container). 
+Alcuni microservizi sono stati containerizzati utilizzando immagini Docker personalizzate, definite tramite Dockerfile specifici. Queste immagini, pubblicate su Docker Hub, permettono un controllo granulare sulle configurazioni dei container, assicurando una maggiore sicurezza e facilitandone il riutilizzo.. 
 
-Oltre a quelli discussi sopra, vi sono anche altri 4 container: uno per ZooKeeper e gli altri per i 3 broker kafka (uno ciascuno). Zookeeper è un servizio centrale per la gestione dei metadati e il coordinamento dei broker Kafka; infatti, si occupa di mantenere la configurazione del cluster e di gestire l'elezione del controller tra i broker. In altre parole, senza tale componente i 3 broker non formerebbero un cluster.
+Per ottimizzare la fase di inizializzazione del cluster Kubernetes, sono stati adottati accorgimenti riguardo la gestione dei volumi persistenti. Nello specifico, è stato scelto di dichiarare esplicitamente i Persistent Volumes (PV), associandoli manualmente ai Persistent Volume Claims (PVC) tramite il campo volumeName. Questo approccio previene errori di *provisioning* e, al contempo, assicura che i volumi soddisfino i requisiti. 
 
-Si è scelto di isolare le funzionalità di amministrazione di Kafka in un container dedicato per garantire il principio di separazione delle responsabilità, mantenendo chiara la distinzione tra le operazioni di gestione del cluster Kafka e le altre componenti del sistema. Si è, inoltre, deciso di implementare un unico container (anziché suddividerlo in due), poiché la creazione di topic e il recupero dei metadati sono operazioni strettamente correlate tra loro e condividono la stessa logica di interazione con il cluster Kafka.
+Relativamente al  monitoraggio, sono stati utilizzati tre tipi di metriche principali: Histogram, Gauge e Counter, ognuna scelta in base alla natura del dato da misurare. Le metriche di tipo Histogram (response\_time\_seconds e production\_latency) sono state adottate per analizzare la distribuzione di valori continui, come la latenza di risposta o la latenza di produzione, permettendo un monitoraggio su intervalli di tempo definiti. Quelle di tipo Gauge (cache\_size e monitored\_tickers) sono state utilizzate per tenere traccia di valori che possono fluttuare nel tempo, come il numero di entry nella cache o il numero di ticker monitorati nel database. Infine, le metriche Counter (request\_total, success\_request, e request\_to\_yf) misurano valori cumulativi, ideali per conteggiare eventi come richieste ricevute, successi o fallimenti di login.
 
-Per quanto riguarda, invece, l’integrazione del pattern Command Query Responsibility Segregation, è stata adottata una strategia che separa nettamente i due aspetti fondamentali della gestione del sistema: tutti i *command* sono stati collocati nel file “command\_service.py”, mentre le *queries* nel file “*query\_service.py*”. 
+Tutte le metriche posseggono delle *labels* che aggiungono un contesto ai dati raccolti, consentendo di individuare rapidamente i componenti, le funzioni o i nodi che richiedono attenzione.
+
+Infine, le regole di allerta scelte permettono di identificare anomalie e problemi di performance nei microservizi. Per il Server, vengono generati avvisi relativamente alla latenza di risposta quando l’80° percentile supera i 2 secondi in un intervallo di 10 minuti (almeno il 20% delle latenze misurate in quell’intervallo supera i 2 secondi) o quando si rilevano aumenti anomali nei fallimenti di login, segnalando potenziali attacchi. Per il Data Collector, invece, altre regole controllano la variazione nel numero di ticker monitorati, attivando notifiche in caso di cali significativi, e analizzano la latenza nella produzione (kafka) di messaggi.
 
 # **DETTAGLI IMPLEMENTATIVI:**
 
-* **CQRS**  
-  * Due classi, *CommandService* e *QueryService*, gestiscono rispettivamente le operazioni di scrittura e lettura, centralizzando le logiche operative.   
-    * In alcuni casi, il  *command* include controlli di validazione per garantire che i dati siano coerenti prima di interagire con il database. Ad esempio, abbiamo:  
-* La verifica della validità dell’email in RegisterUserCommand.  
-* Il controllo che il valore high\_value sia maggiore di low\_value (sia nel comando relativo all’operazione di registrazione del cliente che di modifica in un tempo successivo).  
-* La gestione di valori non inseriti nelle soglie (ovvero, sono impostate \-1 se non inserite, con le logiche di controllo del superamento delle soglie che dipendono da questa struttura di memorizzazione).  
-  * I *command* e le *query,* inoltre, contengono la logica di creazione della query SQL che viene poi eseguita dagli handler delle classi CommandService e QueryService.
+* **Kubernetes**  
+  * **Controllo sul primo avvio del cluster**: è stata utilizzata la chiave initContainers (negli oggetti Deployment), la quale svolge un ruolo fondamentale nel garantire l’ordine nell'avvio dei microservizi all'interno di un cluster.   
+    * Gli initContainers sono container eseguiti prima di quelli principali definiti in un Pod e sono stati adoperati nei microservizi che necessitano dell’esecuzione di altri prima di avviarsi.   
+      * Per implementare questo meccanismo di attesa, è stata utilizzata un’immagine leggera come *busybox*, contenente uno script shell che sfrutta lo strumento di connessione *netcat* per verificare la disponibilità della porta associata al Service del Deployment da attendere.   
+        * Il controllo viene ripetuto ciclicamente fino a quando il servizio richiesto non diventa disponibile, garantendo così un avvio ordinato e sincronizzato dei microservizi.  
+      * Microservizi che “attendono”:  
+        * I brokers kafka attendono Zookeeper perché quest’ultimo è responsabile di gestire la configurazione del cluster e di coordinare le operazioni dei broker (elezione del controller ecc.)  
+        * Data collector, Alert notifier, Alert system e Kafka Admin aspettano uno dei 3 broker poiché, senza uno attivo, non possono inviare, ricevere o gestire i messaggi e né configurare i topic richiesti. Pertanto, la disponibilità di almeno un broker garantisce che la pipeline di dati tra i microservizi sia attiva e funzionante.  
+        * Prometheus attende il Data Collector ed il Server perché deve accedere agli endpoint delle metriche esposti da questi microservizi per avviare il monitoraggio.  
+        * Il Server attende il Database MySQL poiché senza questo disponibile non può elaborare richieste che richiedono accesso ai dati.  
+      * Alla luce di quanto si è configurato, nel test con minikube, si è ottenuto il seguente ordine di avvio:  
+1. Alert manager  
+2. Redis  
+3. MySQL  
+4. Zookeeper  
+5. Brokers Kafka  
+6. Server  
+7. Alert system  
+8. Alert notifier  
+9. Data collector  
+10. Prometheus
 
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/b46030d1-ee84-4ef0-8ab7-880660e7d61b" alt="immagine descrizione" />
-</div>
+	 
 
+* **Chiave ‘replicas’ di ‘spec’:** si è scelto di impostare ad 1 tale parametro per tutti i deployment per uno scenario iniziale in cui il sistema non è sottoposto a un carico elevato, ma con la consapevolezza che, nel caso in cui fosse necessario uno scale-out del sistema, basterebbe aumentare tale valore e k8s si occuperebbe di gestire automaticamente la replicazione e il load balancing delle richieste tra le varie repliche. Per consentire ciò si è deciso, inoltre, di modificare il server–grpc e si è scelto di aggiungere redis come nuovo microservizio, in modo da garantire il rispetto della politica *at-most-once* anche nel caso in cui si decidesse, appunto, di avere più repliche del server. 
 
+              
 
-            
+* **Prometheus**
 
-* **Sistema di notifica con Apache Kafka**
-![image](https://github.com/user-attachments/assets/e08c4599-0a46-4a19-9cbc-0ad8331252df)
+**![photo_2025-01-06_12-59-34](https://github.com/user-attachments/assets/e830963e-f103-4e7e-9f74-1236294534c3)**
 
+**\- N.B:** è stata utilizzata la libreria prometheus\_client di python.
 
-* **KafkaAdmin (management)**: Componente responsabile dell’inizializzazione del cluster kafka (creazione e configurazione dei topic) e del monitoraggio di quest’ultimo.  
-  * La funzione create\_topic permette la creazione dei topic “to-alert-system” e “to-notifier”. Entrambi i topic sono stati configurati con una sola partizione e un fattore di replica pari a tre. La scelta di utilizzare una sola partizione è legata allo scenario iniziale, in cui è presente un solo AlertSystem e un solo AlertNotifierSystem, rendendo superfluo un numero maggiore di partizioni. Tuttavia, qualora in futuro fosse necessario effettuare uno scale-out del sistema (ad esempio, replicando il numero di AlertSystem e AlertNotifierSystem), il numero di partizioni potrà essere aumentato di conseguenza per sfruttare il meccanismo dei competing consumers, consentendo l'invio delle email in parallelo a più utenti e migliorando così il throughput del sistema. Il fattore di replica è stato impostato a 3 per garantire una maggiore robustezza: utilizzando 3 broker Kafka, il sistema può continuare a funzionare correttamente anche in caso di indisponibilità di uno o due broker.  
-    * La funzione get\_metadata permette di monitorare il funzionamento del cluster Kafka. Ogni 2 minuti, vengono recuperati e stampati i seguenti metadati:  
-      * Informazioni sui broker: ID, host e porta di ciascun broker nel cluster.  
-        * Informazioni sui topic: per ogni topic, vengono riportati l'ID delle partizioni, il broker leader, le repliche e le repliche In-Sync (ISR).
+* **Data Collector**:  si è scelto di raccogliere le seguenti metriche:  
+  * **monitored\_tickers** (Gauge): è il numero di tickers (distinti) che sono presenti nel database. In particolare, al metodo set sull’oggetto Gauge è stata passata la lunghezza della lista restituita dalla funzione fetch\_ticker\_from\_db.  
+    * La scelta di questa metrica è motivata dal fatto che consente di identificare rapidamente problemi nei processi di raccolta e nell’aggiornamento dei dati.  
+  * **production\_latency** (Histogram): ogni volta che il Data Collector invia un messaggio al broker Kafka, viene calcolata la latenza totale, partendo dal momento in cui la produzione del messaggio inizia fino a quando il broker ha finito di scriverlo in tutte le repliche In-Sync. Questo valore viene poi osservato dalla metrica, che registra la latenza in bucket predefiniti (fino a 5 secondi), consentendo un’analisi dettagliata delle prestazioni.   
+    * Una latenza elevata potrebbe indicare problemi di rete o un  sovraccarico del broker, rendendo questa metrica fondamentale per identificare e risolvere eventuali colli di bottiglia.  
+  * **request\_to\_yf** (Counter): tiene traccia del numero totale di richieste effettuate dal Data Collector verso il servizio esterno Yahoo Finance, permettendo di valutare il carico generato dal sistema e di identificare eventuali anomalie come un numero insolitamente alto (o basso) di richieste, o consentendo di distinguere se gli eventuali problemi di risposta sono causati da limitazioni del servizio esterno o da errori interni.   
+    * Nello specifico, la metrica viene incrementata solo per le richieste effettivamente gestite.
 
+* **Server:** si è scelto di raccogliere le seguenti metriche:  
+  * **cache\_size** (Gauge): monitora il numero totale di chiavi memorizzate nella cache Redis.   
+    * Consente di monitorare il corretto aggiornamento della cache.   
+  * **response\_time\_seconds** (Histogram): è una metrica simile sia per struttura che per scopo alla production\_latency vista per il Data Collector. Nello specifico, è calcolata per ogni funzione del server che gestisce una richiesta e consiste nella differenza tra gli istanti di tempo finali e iniziali di tali funzioni.   
+    * Permette di mettere in luce, con precisione, i punti in cui il codice impiega più tempo a rispondere, segnalando così eventuali colli di bottiglia e fornendo una visione approfondita delle prestazioni complessive del Server.  
+  * **request\_total** (counter): è un contatore che viene incrementato ogni volta che il Server riceve una nuova richiesta.   
+    * In questo modo è possibile capire come varia il carico a cui è sottoposto il Server e, di conseguenza, sarà possibile prevedere eventuali picchi di utilizzo.  
+  * **success\_request** (counter): è un contatore che si incrementa ogni volta che il Server gestisce con esito positivo una richiesta.   
+    * Confrontando il valore di questa con quello di *request\_total*, si può calcolare il tasso di successo (e di fallimento) dell’applicazione.   
+  * **login\_failures\_total** (counter): contatore che si incrementa ogni volta che un’operazione di login fallisce.   
+    * Grazie a questa metrica, è possibile individuare potenziali anomalie di sicurezza (attacchi di tipo brute force) o, più semplicemente, potrebbe indicare problemi di usabilità.
 
-    * **Configurazione dei Producer:**
+* **Alert Manager**
 
-      * **Data Collector**: Dopo ogni ciclo di aggiornamento, produce un messaggio su Kafka (topic to-alert-system) contenente un timestamp (il contenuto del messaggio non ha un valore intrinseco, ma serve solo a “svegliare” il consumer sottoscritto al topic in questione).
+  * **Data Collector**: si è scelto di utilizzare delle regole di alerting riguardanti le metriche *monitored\_tickers* e *production\_latency*, in particolare:  
+    * **DrasticDropInMonitoredTickers**: la regola si attiva se il numero di ticker monitorati diminuisce di oltre 10 nell’arco di 5 minuti. Un calo così repentino potrebbe segnalare problemi che richiedono un intervento urgente di verifica.  
+    * **HighProductionLatency**: se l’80° percentile della latenza osservata nelle ultime 24 ore supera i 2 secondi (ovvero, almeno il 20% delle latenze misurate nell'ultimo giorno ha superato i 2 secondi), l’allerta indica che la fase di produzione kafka sta subendo ritardi; ovvero, potrebbero esserci problemi a livello di rete, di configurazione di Kafka o del codice stesso.
 
-      * **AlertSystem:** scrive sul topic to-notifier un messaggio contenente delle informazioni correlate all’utente da notificare tramite email; ovvero: email, ticker, valore del ticker, condizione di superamento e corpo dell’e-mail.  
-        * Dettagli implementativi:  
-          * Utilizzo del pattern Circuit Breaker per quanto concerne la comunicazione col server SMTP.  
-          * Meccanismo di blocco di email ridondanti: è stata utilizzata una cache che tiene traccia, per ogni email inviata, di 3 variabili: valore del ticker al momento dell’invio dell’email, condizione associata (‘higher’ o ‘lower’) e ticker (il simbolo, es: ‘AAPL’). Nello specifico, un’email viene mandata solo se almeno uno di questi 3 fattori varia.  
-            * In particolare, la logica di variazione del valore di un ticker, vista la leggera volatilità del mercato azionario, è stata progettata per evitare l'invio di notifiche per fluttuazioni insignificanti: un valore viene considerato significativo se cambia l'unità della parte intera, piuttosto che i decimali.  
-          * Batch di messaggi (piuttosto che singoli messaggi): A differenza del Data Collector, visto che l’interrogazione al database può restituire molti risultati, al fine di aumentare il throughput e diminuire l’utilizzo della larghezza di banda di rete utilizzata, è stato scelto di sfruttare la possibilità di Apache Kafka di accumulare più messaggi nel buffer del producer prima di inviarli al broker.
-
-      * Per quanto riguarda i **parametri di configurazione** sono stati impostati:  
-        * bootstrap.servers: “kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092”→ specifica l'elenco degli indirizzi dei broker Kafka (in questo caso, i container Docker kafka-broker-1, kafka-broker-2 e kafka-broker-3), utilizzando il DNS di Docker per la risoluzione dei nomi.  
-        * acks: ‘all’ →  garantisce che il broker leader restituisca un ack solo dopo aver scritto il messaggio su tutte le repliche In-Sync (ISR). Questo approccio massimizza l'affidabilità: se il broker leader dovesse fallire, le repliche avranno comunque una copia consistente del messaggio. Tuttavia, questa configurazione può aumentare leggermente la latenza.
-
-
-        * linger.ms:   
-          * 0 → **configurazione utilizzata per il data collector:** I messaggi sono inviati immediatamente (non inviamo batch ma singoli messaggi in quanto produce 1 solo messaggio per ciclo).  
-          * 500 \-\> **configurazione utilizzata per l’alert system:** aspetta 500ms prima di inviare i messaggi al broker, in questo modo si formano batch di messaggi.  
-        * max.in.flight.requests.per.connection: 1 → non vogliamo più richieste simultanee da parte del producer verso il broker perchè prediligiamo l’affidabilità e la coerenza temporale.  
-        * retries: 3 → tenterà di inviare il messaggio fino a tre volte prima di fallire definitivamente. In combinazione al parametro precedente garantiamo resilienza (a scapito del throughput).
-
-    * **Configurazione dei Consumer:**
-
-      * **AlertSystem**: effettua la sottoscrizione al topic to-alert-system: ogni messaggio rappresenta una notifica che i dati nel database sono stati aggiornati.   
-        * Si occupa, inoltre, di interrogare il database per identificare i ticker i cui valori hanno oltrepassato le soglie indicate dagli utenti. Include anche la logica per capire quali delle due (high\_value o low\_value) è stata superata, se entrambe presenti.
-
-      * **AlertNotifierSystem:** effettua la sottoscrizione al topic to-notifier: ogni messaggio rappresenta il contenuto dell’email da inviare all’utente nel caso in cui si è verificata una certa condizione con una delle due soglie.   
-        * Elaborazione: all’interno del poll loop, abbiamo deciso di procedere con l’invio delle email al raggiungimento di una lunghezza del batch di 10\. Il commit viene effettuato solo alla fine dell’elaborazione di tutti i 10 messaggi in modo da evitare che vi siano perdite di messaggi (ovvero, preferiamo una eventuale duplicazione della mail in quanto è un’operazione idempotente) in caso di fault del consumer durante l’elaborazione del batch.  
-        * Gestione dei fallimenti temporanei del server SMTP: la chiamata al metodo call del Circuit Breaker (a cui viene passata la funzione send_email) è incapsulata all’interno di un ciclo while che esegue per un numero massimo di 5 volte se la connessione al server da errore. Questo perché si vuole evitare che errori temporanei impediscano l’invio delle email.
-
-      * Per quanto riguarda i **parametri di configurazione**:  
-        * bootstrap.servers: “kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092”→ specifica l'elenco degli indirizzi dei broker Kafka (in questo caso, i container Docker kafka-broker-1, kafka-broker-2 e kafka-broker-3), utilizzando il DNS di Docker per la risoluzione dei nomi.  
-        * group.id: ‘group1’→  definisce il gruppo al quale appartiene il consumer, questo permette di implementare il meccanismo dei competing consumer nel caso in cui si fossero usate più partizioni e fossero stati replicati i consumer.  
-        * auto.offset.reset: ‘earliest’ → per assicurare che, al momento della sottoscrizione a un topic, il consumer recuperi i messaggi dall'inizio della partizione. Questo è utile nei casi in cui il consumer non ha offset salvati o quando viene eseguita una rielezione. In alternativa, il valore latest farebbe leggere solo i nuovi messaggi prodotti dopo la sottoscrizione.  
-        * enable.auto.commit: False → in questo modo implementiamo il meccanismo di commit in modo customizzato, in particolare, in tutti i consumer si è scelto di *committare* solo successivamente all’elaborazione del messaggio in modo da prevenire il rischio di perdere messaggi (a scapito di eventuali duplicazioni in caso di riavvii del consumer).
-
-
+  * **Server:** si è scelto di utilizzare delle regole di alerting riguardanti le metriche *login\_failures\_total* e *response\_time\_seconds\_bucket*, in particolare:  
+    * **HighResponseTimePerRequest**:  l’allerta si attiva quando l’80° percentile del tempo di risposta del server supera i 2 secondi negli ultimi 10 minuti e risulta utile per individuare rallentamenti nelle chiamate in ingresso.  
+    * **LoginFailuresSpike**: rileva se, in un intervallo di 5 minuti, avvengono più di 50 tentativi di login falliti. Un picco simile può segnalare problemi di sicurezza o difficoltà generali di accesso da parte di molti utenti in contemporanea.	
 ## File per il Build e il Deploy
-[Build&Deploy&Setup_info.pdf](https://github.com/user-attachments/files/18318333/Build.Deploy.Setup_info.pdf)
+[Build&Deploy&Setup_info.pdf](https://github.com/user-attachments/files/18319050/Build.Deploy.Setup_info.pdf)
+
 
